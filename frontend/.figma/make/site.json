@@ -1,0 +1,12 @@
+{
+  "title": "PokeFind",
+  "description": "A multilingual C2C marketplace for buying, selling, and negotiating Pokemon cards with real-time chat, verified profiles, and business analytics.",
+  "language": "th",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

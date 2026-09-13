@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Sarabun:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #06071A;
+  --color-foreground: #F0F0FF;
+  --color-card: #0C0E28;
+  --color-card-foreground: #E8E8FF;
+  --color-primary: #FFD600;
+  --color-primary-foreground: #06071A;
+  --color-secondary: #3B1874;
+  --color-secondary-foreground: #E8E8FF;
+  --color-muted: #141632;
+  --color-muted-foreground: #7880AA;
+  --color-accent: #FF2EBD;
+  --color-accent-foreground: #06071A;
+  --color-border: rgba(255,255,255,0.07);
+  --color-ring: #FFD600;
+  --color-success: #00E676;
+  --color-warning: #FFB300;
+  --color-danger: #FF3D57;
+  --font-display: 'Chakra Petch', 'Sarabun', system-ui, sans-serif;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-body: 'Sarabun', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
+  --radius: 6px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #06071A;
+  color: #F0F0FF;
+  font-family: 'Sarabun', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,214,0,0.4); border-radius: 0; }
+
+/* Fonts */
+.font-display { font-family: 'Chakra Petch', 'Sarabun', sans-serif; }
+.font-pixel   { font-family: 'Press Start 2P', monospace; }
+.font-mono    { font-family: 'DM Mono', monospace; }
+
+/* Pixel hard shadow — game aesthetic */
+.pixel-shadow {
+  box-shadow: 3px 3px 0 rgba(255,214,0,0.5);
+}
+.pixel-shadow-accent {
+  box-shadow: 3px 3px 0 rgba(255,46,189,0.5);
+}
+.pixel-shadow-sm {
+  box-shadow: 2px 2px 0 rgba(255,214,0,0.35);
+}
+
+/* Scanline overlay on card art */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.12) 2px,
+    rgba(0,0,0,0.12) 4px
+  );
+  pointer-events: none;
+}
+
+/* Grid background texture */
+.pixel-bg {
+  background-image:
+    linear-gradient(rgba(255,214,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,214,0,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Neon glow */
+.neon-yellow { text-shadow: 0 0 8px rgba(255,214,0,0.8), 0 0 20px rgba(255,214,0,0.4); }
+.neon-pink   { text-shadow: 0 0 8px rgba(255,46,189,0.8), 0 0 20px rgba(255,46,189,0.4); }
+
+/* Card hover */
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.card-hover:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 4px 4px 0 rgba(255,214,0,0.35), 0 0 20px rgba(255,214,0,0.1);
+  border-color: rgba(255,214,0,0.3);
+}
+.card-hover:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 1px 1px 0 rgba(255,214,0,0.3);
+}
+
+/* Holo shimmer */
+.holo-shimmer {
+  background: linear-gradient(135deg,
+    rgba(255,214,0,0.04) 0%,
+    rgba(255,46,189,0.04) 33%,
+    rgba(107,61,255,0.04) 66%,
+    rgba(255,214,0,0.04) 100%
+  );
+}
+
+/* Badges */
+.badge-business {
+  background: linear-gradient(90deg, #FFD600, #FF8C00);
+  color: #06071A;
+  font-family: 'Press Start 2P', monospace;
+  font-weight: 700;
+  font-size: 8px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.badge-verified {
+  background: linear-gradient(90deg, #00E676, #00BCD4);
+  color: #06071A;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 3px;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: white;
+  transition: left 0.2s;
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+/* Pixel button */
+.btn-primary {
+  background: #FFD600;
+  color: #06071A;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  border: none;
+  box-shadow: 3px 3px 0 rgba(180,120,0,0.6);
+  transition: all 0.1s;
+}
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(180,120,0,0.6);
+}
+
+/* Bottom safe spacing */
+.bottom-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Modal above nav: use this on fixed bottom-sheet overlays on pages with visible nav */
+.modal-above-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)) !important; }
+
+/* Condition colors */
+.cond-M  { color: #00E676; }
+.cond-NM { color: #69F0AE; }
+.cond-LP { color: #FFD600; }
+.cond-MP { color: #FF9800; }
+.cond-HP { color: #FF3D57; }
+
+input, textarea, select { outline: none; }
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid rgba(255,214,0,0.5);
+  outline-offset: 1px;
+}
+
+/* Animations */
+.animate-slide-up {
+  animation: slideUp 0.25s ease forwards;
+}
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Scrollbar hide while not scrolling */
+.scroll-hide { scrollbar-width: none; }
+.scroll-hide::-webkit-scrollbar { display: none; }
