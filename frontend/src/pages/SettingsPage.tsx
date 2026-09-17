@@ -36,15 +36,15 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
   const Row = ({ icon, label, sublabel, right, onClick }: { icon: string; label: string; sublabel?: string; right?: React.ReactNode; onClick?: () => void }) => {
     const content = <>
       <span className="text-lg w-6 text-center shrink-0">{icon}</span>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <p className="font-display text-sm text-foreground">{label}</p>
-        {sublabel && <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>}
+        {sublabel && <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{sublabel}</p>}
       </div>
       {right ?? (onClick && (
-        <span className="text-xs text-muted-foreground">›</span>
+        <span className="text-xs text-muted-foreground shrink-0">›</span>
       ))}
     </>;
-    const rowClass = "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors";
+    const rowClass = "w-full min-w-0 flex items-center gap-3 px-4 py-3.5 text-left transition-colors";
     const rowStyle = { borderBottom: '1px solid rgba(255,255,255,0.05)' };
     return onClick
       ? <button type="button" onClick={onClick} className={`${rowClass} hover:bg-white/[0.03]`} style={rowStyle}>{content}</button>
@@ -52,27 +52,27 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-background pixel-bg">
-      <div className="px-4 pt-12 pb-4 shrink-0"
-        style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
+    <div className="page-shell bg-background pixel-bg">
+      <div className="page-container px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
+        style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
         <h1 className="font-display text-xl font-bold" style={{ color: '#FFD600', textShadow: '0 0 12px rgba(255,214,0,0.4)' }}>{t.settingsTitle}</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-6 bottom-safe flex flex-col gap-4 px-4 pt-4">
+      <div className="page-scroll scroll-end-buffer space-y-4 px-4 md:px-6 lg:px-8 pt-4 page-container max-w-2xl w-full">
         {/* Account */}
         {isAuthenticated && currentUser && (
-          <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
-            <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="panel-card overflow-hidden">
+            <div className="flex items-center gap-3 p-4 min-w-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="w-12 h-12 flex items-center justify-center text-lg font-bold shrink-0"
                 style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 6, boxShadow: '2px 2px 0 rgba(255,46,189,0.3)' }}>
                 {currentUser.avatar}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-display font-bold text-sm text-foreground">{currentUser.name}</p>
-                  {currentUser.role === 'business' && <span className="badge-business">{t.businessBadge}</span>}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-display font-bold text-sm text-foreground truncate">{currentUser.name}</p>
+                  {currentUser.role === 'business' && <span className="badge-business shrink-0">{t.businessBadge}</span>}
                 </div>
-                <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{currentUser.email}</p>
               </div>
             </div>
             <Row icon="👤" label={t.account} />
@@ -83,7 +83,7 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
         )}
 
         {/* Notifications */}
-        <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
+        <div className="panel-card overflow-hidden">
           <SectionHeader label={t.notifications} />
           <Row icon="🔔" label={t.pushNotifications} sublabel={t.pushNotifSub} right={<Toggle label={t.pushNotifications} value={push} onChange={() => setPush(!push)} />} />
           <Row icon="📧" label={t.emailNotifications} sublabel={t.emailNotifSub} right={<Toggle label={t.emailNotifications} value={emailNotif} onChange={() => setEmailNotif(!emailNotif)} />} />
@@ -92,13 +92,13 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
         </div>
 
         {/* Locale and currency */}
-        <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
+        <div className="panel-card">
           <SectionHeader label={t.appLanguage} />
-          <div className="p-3"><LocaleCurrencySwitcher lang={lang} currency={currency} onLangChange={onLangChange} onCurrencyChange={onCurrencyChange} /></div>
+          <div className="p-4 pb-5"><LocaleCurrencySwitcher lang={lang} currency={currency} onLangChange={onLangChange} onCurrencyChange={onCurrencyChange} /></div>
         </div>
 
         {/* Help + info */}
-        <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
+        <div className="panel-card overflow-hidden">
           <Row icon="❓" label={t.help} onClick={() => {}} />
           <Row icon="📄" label={t.privacy} onClick={() => {}} />
           <Row icon="📋" label={t.terms} onClick={() => {}} />

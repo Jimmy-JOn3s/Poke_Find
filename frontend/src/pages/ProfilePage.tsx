@@ -57,10 +57,10 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
   return (
     <div className="flex flex-col min-h-full bg-background">
       {/* Profile hero */}
-      <div className="relative pt-12 pixel-bg"
+      <div className="relative page-header pixel-bg"
         style={{ background: 'linear-gradient(160deg, #1A0A3D 0%, #06071A 70%)' }}>
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(59,24,116,0.5) 0%, transparent 70%)' }} />
-        <div className="relative px-4 pb-5 flex flex-col items-center text-center">
+        <div className="relative page-container px-4 md:px-6 lg:px-8 pb-5 flex flex-col items-center text-center">
           {/* Avatar */}
           <div className="w-18 h-18 w-[72px] h-[72px] flex items-center justify-center text-2xl font-bold mb-3 relative"
             style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 8, boxShadow: '3px 3px 0 rgba(255,46,189,0.4)' }}>
@@ -113,7 +113,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
 
       {/* Business analytics button */}
       {isOwnProfile && profileUser.role === 'business' && (
-        <div className="px-4 pt-3">
+        <div className="page-container px-4 md:px-6 lg:px-8 pt-3">
           <button onClick={onViewAnalytics}
             className="w-full flex items-center justify-between p-4 transition-all"
             style={{ background: 'rgba(255,214,0,0.05)', border: '1px solid rgba(255,214,0,0.2)', borderRadius: 6, boxShadow: '2px 2px 0 rgba(255,214,0,0.1)' }}>
@@ -130,7 +130,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
       )}
 
       {/* Tabs */}
-      <div className="flex px-4 pt-3 gap-2">
+      <div className="page-container flex px-4 md:px-6 lg:px-8 pt-3 gap-2 max-w-2xl">
         {(['listings', 'reviews'] as const).map(tabId => (
           <button key={tabId} onClick={() => setTab(tabId)}
             className="flex-1 py-2.5 text-sm font-bold font-display transition-all"
@@ -147,9 +147,9 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 bottom-safe">
+      <div className="flex-1 overflow-y-auto scroll-end-buffer px-4 md:px-6 lg:px-8 pt-3">
         {tab === 'listings' && (
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="page-container grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-3 lg:gap-4">
             {userListings.length === 0 ? (
               <div className="col-span-2 py-12 text-center">
                 <p className="font-display text-sm text-muted-foreground">{t.noListings}</p>

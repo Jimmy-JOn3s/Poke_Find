@@ -171,11 +171,73 @@ body {
   box-shadow: 1px 1px 0 rgba(180,120,0,0.6);
 }
 
-/* Bottom safe spacing */
+/* Bottom safe spacing (mobile bottom nav) */
 .bottom-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 768px) {
+  .bottom-safe { padding-bottom: 0; }
+}
+
+/* Scrollable pages: nav clearance + visual buffer (do not combine with Tailwind pb-* on same node) */
+.scroll-end-buffer {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .scroll-end-buffer {
+    padding-bottom: 2.5rem;
+  }
+}
 
 /* Modal above nav: use this on fixed bottom-sheet overlays on pages with visible nav */
 .modal-above-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)) !important; }
+@media (min-width: 768px) {
+  .modal-above-nav { padding-bottom: 1rem !important; }
+}
+
+/* Page content width on large screens */
+.page-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Flex column pages: header + scrollable body */
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.page-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Prevent flex children from shrinking — content should scroll, not compress */
+.page-scroll > * {
+  flex-shrink: 0;
+}
+
+/* Card panels — avoid overflow:hidden which clips selects and multi-line rows */
+.panel-card {
+  background: #0C0E28;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
+}
+
+/* Sticky page headers — less top padding on desktop (no notch) */
+.page-header {
+  padding-top: 3rem;
+}
+@media (min-width: 768px) {
+  .page-header { padding-top: 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .page-header { padding-top: 2rem; }
+}
 
 /* Condition colors */
 .cond-M  { color: #00E676; }

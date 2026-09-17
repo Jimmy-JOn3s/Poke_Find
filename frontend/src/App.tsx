@@ -174,13 +174,13 @@ export default function App() {
 
   const showNav = currentPage !== "auth" && currentPage !== "listing";
   return (
-    <div className="relative flex flex-col bg-background" style={{ height: "100dvh", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
-      {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 z-[80] p-2 text-xs"
+    <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
+      {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs"
         style={{ background: "#3a0b19", border: "1px solid #FF3D57", color: "#fff", borderRadius: 4 }}>{actionError} · ✕</button>}
-      <div className="flex-1 overflow-hidden flex flex-col" style={{ paddingBottom: showNav ? "4rem" : 0 }}>
-        <div className="flex-1 overflow-hidden flex flex-col h-full">{renderPage()}</div>
-      </div>
       {showNav && <Navigation current={currentPage} onNav={handleNav} isAuthenticated={isAuthenticated} lang={lang} unreadChats={0} />}
+      <main className={`flex-1 overflow-hidden flex flex-col min-w-0 ${showNav ? "bottom-safe md:bottom-0 md:pl-56" : ""}`}>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>
+      </main>
       {showCreateListing && <CreateListingModal lang={lang} onClose={() => { setShowCreateListing(false); setEditListing(undefined); }}
         onSubmit={data => void handleCreateListing(data)} editListing={editListing} sellerRole={currentUser?.role || "personal"} />}
     </div>

@@ -14,7 +14,7 @@ const th = {
   condition: 'สภาพการ์ด', language: 'ภาษาการ์ด', set: 'เซต', cardNumber: 'เลขการ์ด',
   listedPrice: 'ราคาตั้ง', finalPrice: 'ราคาสุดท้าย', quantity: 'จำนวน', sellerType: 'ประเภทผู้ขาย',
   createListing: 'ลงขาย', editListing: 'แก้ไขรายการ', deleteListing: 'ลบรายการ',
-  contactSeller: 'ติดต่อผู้ขาย', makeOffer: 'เสนอราคา', buyNow: 'ซื้อเลย',
+  contactSeller: 'ติดต่อผู้ขาย', makeOffer: 'เสนอราคา', buyNow: 'ซื้อเลย', 
 
   // Conditions
   M: 'มินต์', NM: 'เกือบมินต์', LP: 'เล่นเบา', MP: 'เล่นปานกลาง', HP: 'เล่นหนัก',

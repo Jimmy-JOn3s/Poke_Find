@@ -50,9 +50,9 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
   return (
     <div className="flex flex-col h-full pixel-bg">
       {/* Header */}
-      <div className="px-4 pt-12 pb-3 shrink-0"
+      <div className="page-container px-4 md:px-6 lg:px-8 page-header pb-3 shrink-0"
         style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-4">
           <div>
             <h1 className="font-display text-xl font-bold" style={{ color: '#FFD600', textShadow: '0 0 12px rgba(255,214,0,0.5)' }}>
               {t.discoverTitle}
@@ -79,7 +79,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
         </div>
 
         {/* Filter row */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scroll-hide">
+        <div className="flex gap-2 overflow-x-auto md:overflow-visible md:flex-wrap pb-1 scroll-hide">
           <button onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold shrink-0 transition-all"
             style={{
@@ -110,7 +110,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
         </div>
 
         {showFilters && (
-          <div className="mt-2 p-3 grid grid-cols-3 gap-2 animate-slide-up"
+          <div className="mt-2 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 animate-slide-up"
             style={{ background: 'rgba(12,14,40,0.98)', border: '1px solid rgba(255,214,0,0.15)', borderRadius: 4 }}>
             {[
               { value: filterCondition, onChange: setFilterCondition, placeholder: t.allConditions, options: CONDITIONS.map(c => ({ v: c, l: t[c] })) },
@@ -129,7 +129,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto px-3 bottom-safe">
+      <div className="flex-1 overflow-y-auto scroll-end-buffer px-3 md:px-6 lg:px-8">
         {loading && <p className="text-center text-sm text-muted-foreground py-8">{t.loading}</p>}
         {error && (
           <div className="text-center py-8">
@@ -137,7 +137,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
             <button className="btn-primary px-4 py-2 text-xs" onClick={onRetry}>{t.tryAgain}</button>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2.5 pt-3">
+        <div className="page-container grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 md:gap-3 lg:gap-4 pt-3 pb-6">
           {filtered.map(listing => (
             <ListingCard key={listing.id} listing={listing} t={t} lang={lang} displayCurrency={displayCurrency} onClick={() => onSelectListing(listing)} />
           ))}

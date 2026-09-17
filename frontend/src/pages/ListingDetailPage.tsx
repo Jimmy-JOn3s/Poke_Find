@@ -35,21 +35,21 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
   const langLabel = { th: `🇹🇭 ${t.th}`, en: `🇺🇸 ${t.en}`, ja: '🇯🇵 日本語' }[listing.language];
 
   return (
-    <div className="flex flex-col min-h-full bg-background">
+    <div className="flex flex-col md:flex-row min-h-full bg-background">
       {/* Card art hero */}
-      <div className="relative h-72 flex items-center justify-center overflow-hidden scanlines"
+      <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 flex items-center justify-center overflow-hidden scanlines md:sticky md:top-0"
         style={{ background: `linear-gradient(160deg, ${listing.gradientFrom}33 0%, ${listing.gradientTo}55 100%)` }}>
         <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}25 0%, ${listing.gradientTo}45 100%)` }} />
-        <div className="relative z-10 text-8xl" style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.7))' }}>{listing.typeIcon}</div>
+        <div className="relative z-10 text-8xl md:text-9xl" style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.7))' }}>{listing.typeIcon}</div>
 
         <button onClick={onBack}
-          className="absolute top-12 left-4 z-20 w-9 h-9 flex items-center justify-center font-display"
+          className="absolute top-12 md:top-4 left-4 z-20 w-9 h-9 flex items-center justify-center font-display"
           style={{ background: 'rgba(6,7,26,0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 4 }}>
           ←
         </button>
 
         <button onClick={() => setLiked(!liked)}
-          className="absolute top-12 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all"
+          className="absolute top-12 md:top-4 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all"
           style={{ background: liked ? 'rgba(255,46,189,0.3)' : 'rgba(6,7,26,0.8)', backdropFilter: 'blur(12px)', border: `1px solid ${liked ? 'rgba(255,46,189,0.5)' : 'rgba(255,255,255,0.12)'}`, borderRadius: 4, color: liked ? '#FF2EBD' : '#F0F0FF' }}>
           ♥
         </button>
@@ -61,8 +61,8 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: isOwner ? '1rem' : '5rem' }}>
-        <div className="px-4 pt-4">
+      <div className={`flex-1 flex flex-col min-w-0 overflow-y-auto ${!isOwner ? 'pb-20 md:pb-4' : 'pb-4'}`}>
+        <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-4 flex-1 max-w-2xl lg:max-w-none">
           {/* Title row */}
           <div className="flex items-start justify-between gap-3 mb-1">
             <h1 className="font-display text-lg font-bold text-foreground leading-tight flex-1">{listing.productName}</h1>
@@ -98,7 +98,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           </div>
 
           {/* Details grid */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
             {[
               { label: t.condition, value: conditionFull, color: conditionColor(listing.condition) },
               { label: t.language, value: langLabel },
@@ -140,19 +140,30 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           )}
 
           {/* Meta */}
-          <div className="flex gap-3 text-xs text-muted-foreground font-mono mb-2">
+          <div className="flex gap-3 text-xs text-muted-foreground font-mono mb-2 md:mb-0">
             <span>♥ {liked ? listing.likes + 1 : listing.likes}</span>
             <span>·</span>
             <span>👁 {listing.views}</span>
             <span>·</span>
             <span>{t.postedOn} {listing.createdAt}</span>
           </div>
+
+          {/* CTA — inline on desktop */}
+          {!isOwner && (
+            <div className="hidden md:block mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,214,0,0.15)' }}>
+              <button onClick={() => onChat(listing)}
+                className="w-full max-w-md py-4 text-sm font-bold font-display flex items-center justify-center gap-2 btn-primary"
+                style={{ borderRadius: 4 }}>
+                💬 {t.contactSeller} / {t.makeOffer}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* CTA */}
+      {/* CTA — fixed bar on mobile */}
       {!isOwner && (
-        <div className="fixed bottom-0 left-0 right-0 px-4 py-3 max-w-lg mx-auto"
+        <div className="md:hidden fixed bottom-0 left-0 right-0 px-4 py-3"
           style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,214,0,0.15)' }}>
           <button onClick={() => onChat(listing)}
             className="w-full py-4 text-sm font-bold font-display flex items-center justify-center gap-2 btn-primary"
@@ -164,10 +175,10 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
       {/* Delete confirm */}
       {showDelete && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center animate-fade-in"
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in p-0 md:p-4"
           style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)' }}>
-          <div className="w-full max-w-lg p-5 border-t"
-            style={{ background: '#0C0E28', borderColor: 'rgba(255,61,87,0.2)', borderRadius: '8px 8px 0 0' }}>
+          <div className="w-full max-w-lg p-5 border-t md:border rounded-t-lg md:rounded-lg"
+            style={{ background: '#0C0E28', borderColor: 'rgba(255,61,87,0.2)' }}>
             <h3 className="font-display text-lg font-bold text-foreground mb-2">{t.deleteListing}</h3>
             <p className="text-muted-foreground text-sm mb-2">{t.deleteConfirm}</p>
             <p className="text-xs text-muted-foreground mb-5">{t.deleteWarning}</p>
