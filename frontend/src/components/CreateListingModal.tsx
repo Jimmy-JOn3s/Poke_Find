@@ -18,6 +18,7 @@ const CONDITIONS: { value: CardCondition }[] = [
 const LANGUAGES: { value: CardLanguage; flag: string }[] = [
   { value: 'th', flag: '🇹🇭' },
   { value: 'en', flag: '🇺🇸' },
+  { value: 'ja', flag: '🇯🇵' },
 ];
 
 const TYPE_ICONS = ['🔥', '💧', '🌿', '⚡', '🔮', '🌙', '🐉', '✨', '⚪', '⚔️'];

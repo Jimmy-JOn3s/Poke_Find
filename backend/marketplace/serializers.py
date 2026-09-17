@@ -13,7 +13,7 @@ class ListingSerializer(serializers.ModelSerializer):
         fields = (
             "id", "seller", "product_name", "set_name", "set_code", "card_number",
             "condition", "card_language", "rarity", "asking_price", "currency",
-            "quantity", "description", "photo", "status", "is_saved", "created_at", "updated_at",
+            "quantity", "description", "image_url", "photo", "status", "is_saved", "created_at", "updated_at",
         )
         read_only_fields = ("id", "seller", "is_saved", "created_at", "updated_at")
 

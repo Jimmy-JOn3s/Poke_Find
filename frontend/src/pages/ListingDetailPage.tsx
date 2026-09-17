@@ -3,6 +3,7 @@ import type { Listing, AppLang, Currency, User } from '../types';
 import { i18n } from '../i18n';
 import { MOCK_USERS } from '../mockData';
 import Price from '../components/Price';
+import CardArt from '../components/CardArt';
 
 interface Props {
   listing: Listing;
@@ -32,15 +33,22 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
   const rarityLabel = listing.rarity === 'secret' ? t.raritySecret : listing.rarity === 'ultra' ? t.rarityUltra : t.rarityRare;
   const conditionFull = { M: t.M, NM: t.NM, LP: t.LP, MP: t.MP, HP: t.HP }[listing.condition];
-  const langLabel = { th: `🇹🇭 ${t.th}`, en: `🇺🇸 ${t.en}`, ja: '🇯🇵 日本語' }[listing.language];
+  const langLabel = { th: `🇹🇭 ${t.th}`, en: `🇺🇸 ${t.en}`, ja: `🇯🇵 ${t.ja}` }[listing.language];
 
   return (
     <div className="flex flex-col md:flex-row min-h-full bg-background">
       {/* Card art hero */}
       <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 flex items-center justify-center overflow-hidden scanlines md:sticky md:top-0"
         style={{ background: `linear-gradient(160deg, ${listing.gradientFrom}33 0%, ${listing.gradientTo}55 100%)` }}>
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}25 0%, ${listing.gradientTo}45 100%)` }} />
-        <div className="relative z-10 text-8xl md:text-9xl" style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.7))' }}>{listing.typeIcon}</div>
+        <CardArt
+          imageUrl={listing.imageUrl}
+          typeIcon={listing.typeIcon}
+          gradientFrom={listing.gradientFrom}
+          gradientTo={listing.gradientTo}
+          alt={listing.productName}
+          iconClassName="text-8xl md:text-9xl"
+          className="p-4 md:p-6"
+        />
 
         <button onClick={onBack}
           className="absolute top-12 md:top-4 left-4 z-20 w-9 h-9 flex items-center justify-center font-display icon-btn">

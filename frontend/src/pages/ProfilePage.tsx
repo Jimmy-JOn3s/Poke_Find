@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AppLang, Currency, User, Listing, Review } from '../types';
 import { i18n } from '../i18n';
 import Price from '../components/Price';
+import CardArt from '../components/CardArt';
 
 interface Props {
   lang: AppLang;
@@ -154,9 +155,17 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
                       ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
                       : undefined,
                   }}>
-                  <div className="relative aspect-square flex items-center justify-center scanlines"
+                  <div className="relative aspect-square flex items-center justify-center overflow-hidden scanlines"
                     style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}33, ${listing.gradientTo}44)` }}>
-                    <span className="text-4xl">{listing.typeIcon}</span>
+                    <CardArt
+                      imageUrl={listing.imageUrl}
+                      typeIcon={listing.typeIcon}
+                      gradientFrom={listing.gradientFrom}
+                      gradientTo={listing.gradientTo}
+                      alt={listing.productName}
+                      iconClassName="text-4xl"
+                      className="p-1"
+                    />
                     {listing.status === 'completed' && (
                       <div className="absolute inset-0 flex items-center justify-center"
                         style={{ background: 'color-mix(in srgb, var(--color-success) 12%, transparent)' }}>

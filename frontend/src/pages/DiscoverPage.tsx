@@ -3,6 +3,7 @@ import type { Listing, AppLang, CardCondition, CardLanguage, Currency } from '..
 import { i18n } from '../i18n';
 import { SETS } from '../mockData';
 import Price from '../components/Price';
+import CardArt from '../components/CardArt';
 
 interface Props {
   lang: AppLang;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 const CONDITIONS: CardCondition[] = ['M', 'NM', 'LP', 'MP', 'HP'];
-const LANGUAGES: CardLanguage[] = ['th', 'en'];
+const LANGUAGES: CardLanguage[] = ['th', 'en', 'ja'];
 
 export default function DiscoverPage({ lang, onSelectListing, onCreateListing, isAuthenticated, listings, loading, error, displayCurrency, onRetry }: Props) {
   const t = i18n[lang];
@@ -146,8 +147,13 @@ function ListingCard({ listing, t, lang, displayCurrency, onClick }: { listing: 
       {/* Card art */}
       <div className="relative aspect-[2.5/3.5] flex items-center justify-center overflow-hidden scanlines"
         style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}25, ${listing.gradientTo}40)` }}>
-        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${listing.gradientFrom}30 0%, ${listing.gradientTo}50 100%)` }} />
-        <div className="relative z-10 text-5xl" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))' }}>{listing.typeIcon}</div>
+        <CardArt
+          imageUrl={listing.imageUrl}
+          typeIcon={listing.typeIcon}
+          gradientFrom={listing.gradientFrom}
+          gradientTo={listing.gradientTo}
+          alt={listing.productName}
+        />
         {/* Condition */}
         <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 font-pixel text-[8px] listing-badge"
           style={{ color: conditionColor(listing.condition), border: `1px solid ${conditionColor(listing.condition)}40` }}>

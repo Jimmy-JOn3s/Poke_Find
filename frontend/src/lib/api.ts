@@ -32,6 +32,7 @@ export interface ApiListing {
   currency: Currency;
   quantity: number;
   description: string;
+  image_url: string;
   photo: string | null;
   status: string;
   is_saved: boolean;
@@ -86,7 +87,8 @@ export function mapListing(item: ApiListing): Listing {
     quantity: item.quantity, status: item.status as Listing["status"],
     gradientFrom: palette[0], gradientTo: palette[1], typeIcon: palette[2],
     createdAt: item.created_at.slice(0, 10), views: 0, likes: 0,
-    description: item.description, photo: item.photo || undefined, isSaved: item.is_saved,
+    description: item.description, imageUrl: item.image_url || undefined,
+    photo: item.photo || undefined, isSaved: item.is_saved,
   };
 }
 
