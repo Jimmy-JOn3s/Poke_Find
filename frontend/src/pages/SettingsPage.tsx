@@ -53,12 +53,12 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
 
   return (
     <div className="flex flex-col min-h-full bg-background pixel-bg">
-      <div className="px-4 pt-12 pb-4 shrink-0"
+      <div className="page-container px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
         style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
         <h1 className="font-display text-xl font-bold" style={{ color: '#FFD600', textShadow: '0 0 12px rgba(255,214,0,0.4)' }}>{t.settingsTitle}</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-6 bottom-safe flex flex-col gap-4 px-4 pt-4">
+      <div className="flex-1 overflow-y-auto pb-6 bottom-safe flex flex-col gap-4 px-4 md:px-6 lg:px-8 pt-4 page-container max-w-2xl">
         {/* Account */}
         {isAuthenticated && currentUser && (
           <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>

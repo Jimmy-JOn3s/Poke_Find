@@ -63,10 +63,10 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
     ({ M: '#00E676', NM: '#69F0AE', LP: '#FFD600', MP: '#FF9800', HP: '#FF3D57' }[c]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center animate-fade-in modal-above-nav"
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in modal-above-nav p-0 md:p-4"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(14px)' }}>
-      <div className="w-full max-w-lg flex flex-col"
-        style={{ background: '#090B22', border: '1px solid rgba(255,214,0,0.15)', borderRadius: '8px 8px 0 0', maxHeight: '90vh', boxShadow: '0 -3px 0 rgba(255,214,0,0.12)' }}>
+      <div className="w-full max-w-lg flex flex-col rounded-t-lg md:rounded-lg max-h-[90vh] md:max-h-[85vh]"
+        style={{ background: '#090B22', border: '1px solid rgba(255,214,0,0.15)', boxShadow: '0 -3px 0 rgba(255,214,0,0.12)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div>

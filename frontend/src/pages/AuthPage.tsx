@@ -38,26 +38,27 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   };
 
   return (
-    <div className="flex flex-col min-h-full" style={{ background: '#06071A' }}>
+    <div className="flex flex-col md:flex-row min-h-full overflow-y-auto" style={{ background: '#06071A' }}>
       {/* Hero */}
-      <div className="relative overflow-hidden pt-14 pb-8 px-6 text-center pixel-bg"
+      <div className="relative overflow-hidden pt-14 md:pt-0 pb-8 md:pb-0 px-6 md:px-10 lg:px-16 text-center md:text-left pixel-bg md:w-2/5 lg:w-5/12 shrink-0 flex items-center"
         style={{ background: 'linear-gradient(160deg, #1A0A3D 0%, #06071A 60%)' }}>
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,214,0,0.15) 0%, transparent 65%)' }} />
-        <div className="relative">
+        <div className="relative md:max-w-sm">
           <p className="font-pixel text-[10px] mb-3" style={{ color: '#FF2EBD', letterSpacing: '0.15em' }}>POKEFIND</p>
-          <div className="text-5xl mb-2" style={{ filter: 'drop-shadow(0 0 16px rgba(255,214,0,0.6))' }}>⚡</div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
+          <div className="text-5xl md:text-6xl mb-2" style={{ filter: 'drop-shadow(0 0 16px rgba(255,214,0,0.6))' }}>⚡</div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             {mode === 'signin' ? t.welcomeBack : t.createAccount}
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1 md:mt-2">
             {lang === 'th' ? 'ตลาดซื้อขายการ์ด Pokémon ที่น่าเชื่อถือ' : 'Thailand\'s trusted Pokémon card marketplace'}
           </p>
         </div>
       </div>
 
+      <div className="flex-1 flex flex-col min-w-0 md:justify-center md:px-8 lg:px-12 md:py-8">
       {/* Progress dots */}
       {mode === 'signup' && (
-        <div className="flex justify-center gap-2 py-3">
+        <div className="flex justify-center md:justify-start gap-2 py-3 px-5 md:px-0">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="h-1.5 transition-all duration-300"
               style={{ width: step === i + 1 ? 24 : 8, background: step > i ? '#FFD600' : 'rgba(255,255,255,0.12)', borderRadius: 1 }} />
@@ -65,7 +66,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
         </div>
       )}
 
-      <div className="flex-1 px-5 pb-8 bottom-safe">
+      <div className="flex-1 md:flex-none px-5 md:px-0 pb-8 md:pb-0 bottom-safe max-w-md md:max-w-lg w-full md:mx-0">
         {/* Step 1: Credentials */}
         {step === 1 && (
           <div className="animate-slide-up">
@@ -247,6 +248,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

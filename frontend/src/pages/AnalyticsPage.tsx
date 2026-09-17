@@ -57,7 +57,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
   return (
     <div className="flex flex-col min-h-full bg-background pixel-bg">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-4 shrink-0"
+      <div className="page-container flex items-center gap-3 px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
         style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={onBack}
           className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground"
@@ -68,9 +68,9 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 bottom-safe flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 bottom-safe flex flex-col gap-4 page-container max-w-5xl">
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
           {[
             { label: t.revenue, value: `฿${(totalRevenue / 1000).toFixed(0)}K`, sub: `+23%`, color: '#FFD600', icon: '💰' },
             { label: t.transactions, value: totalTx.toString(), sub: `${t.avgTx} ${(totalTx / 6).toFixed(1)} ${t.perMonth}`, color: '#FF2EBD', icon: '🤝' },
