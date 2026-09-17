@@ -26,25 +26,15 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
 
   const totalSteps = mode === 'signup' ? 3 : 1;
 
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 4,
-    fontFamily: "'Sarabun', sans-serif",
-    color: '#F0F0FF',
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: 14,
-  };
+  const inputClass = 'field-input font-body text-sm';
 
   return (
-    <div className="flex flex-col md:flex-row min-h-full overflow-y-auto" style={{ background: '#06071A' }}>
+    <div className="flex flex-col md:flex-row min-h-full overflow-y-auto bg-background">
       {/* Hero */}
-      <div className="relative overflow-hidden pt-14 md:pt-0 pb-8 md:pb-0 px-6 md:px-10 lg:px-16 text-center md:text-left pixel-bg md:w-2/5 lg:w-5/12 shrink-0 flex items-center"
-        style={{ background: 'linear-gradient(160deg, #1A0A3D 0%, #06071A 60%)' }}>
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,214,0,0.15) 0%, transparent 65%)' }} />
+      <div className="relative overflow-hidden pt-14 md:pt-0 pb-8 md:pb-0 px-6 md:px-10 lg:px-16 text-center md:text-left pixel-bg md:w-2/5 lg:w-5/12 shrink-0 flex items-center profile-hero">
+        <div className="absolute inset-0 profile-hero-glow" />
         <div className="relative md:max-w-sm">
-          <p className="font-pixel text-[10px] mb-3" style={{ color: '#FF2EBD', letterSpacing: '0.15em' }}>POKEFIND</p>
+          <p className="font-pixel text-[10px] mb-3 text-accent" style={{ letterSpacing: '0.15em' }}>POKEFIND</p>
           <div className="text-5xl md:text-6xl mb-2" style={{ filter: 'drop-shadow(0 0 16px rgba(255,214,0,0.6))' }}>⚡</div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             {mode === 'signin' ? t.welcomeBack : t.createAccount}
@@ -61,7 +51,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
         <div className="flex justify-center md:justify-start gap-2 py-3 px-5 md:px-0">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="h-1.5 transition-all duration-300"
-              style={{ width: step === i + 1 ? 24 : 8, background: step > i ? '#FFD600' : 'rgba(255,255,255,0.12)', borderRadius: 1 }} />
+              style={{ width: step === i + 1 ? 24 : 8, background: step > i ? 'var(--color-primary)' : 'var(--color-toggle-off)', borderRadius: 1 }} />
           ))}
         </div>
       )}
@@ -71,16 +61,11 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
         {step === 1 && (
           <div className="animate-slide-up">
             {/* Mode toggle */}
-            <div className="flex overflow-hidden mb-5 mt-2" style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4 }}>
+            <div className="flex overflow-hidden mb-5 mt-2 border border-border" style={{ borderRadius: 4 }}>
               {(['signin', 'signup'] as const).map(m => (
                 <button key={m} onClick={() => { setMode(m); setStep(1); setMagicSent(false); }}
-                  className="flex-1 py-2.5 text-sm font-bold transition-all"
-                  style={{
-                    background: mode === m ? '#FFD600' : 'transparent',
-                    color: mode === m ? '#06071A' : '#7880AA',
-                    fontFamily: "'Chakra Petch', sans-serif",
-                    boxShadow: mode === m ? 'inset 2px 2px 0 rgba(180,120,0,0.3)' : 'none',
-                  }}>
+                  className={`flex-1 py-2.5 text-sm font-bold transition-all font-display ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                  style={{ boxShadow: mode === m ? 'inset 2px 2px 0 var(--color-shadow-pixel)' : 'none' }}>
                   {m === 'signin' ? t.signIn : t.createAccount}
                 </button>
               ))}
@@ -88,32 +73,31 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
 
             {/* Google */}
             <button disabled title={lang === 'th' ? 'จะเพิ่มในเวอร์ชันถัดไป' : 'Planned for a later release'}
-              className="w-full flex items-center justify-center gap-3 py-3 text-sm font-semibold text-foreground mb-3 transition-all"
-              style={{ ...inputStyle, padding: '12px', justifyContent: 'center', display: 'flex', gap: 12, opacity: 0.45 }}>
+              className={`${inputClass} flex items-center justify-center gap-3 py-3 mb-3 opacity-45`}>
               <GoogleIcon /> {t.continueWithGoogle}
             </button>
 
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <div className="flex-1 h-px bg-border" />
               <span className="text-xs text-muted-foreground">{t.or}</span>
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <div className="flex-1 h-px bg-border" />
             </div>
 
             {mode === 'signup' && (
               <input type="text" value={name} onChange={e => setName(e.target.value)}
                 aria-label={t.fullName}
-                placeholder={t.fullName} className="mb-3 block" style={inputStyle} />
+                placeholder={t.fullName} className={`${inputClass} mb-3 block`} />
             )}
 
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               aria-label={t.email} autoComplete="email"
-              placeholder={t.email} className="mb-3 block" style={inputStyle} />
+              placeholder={t.email} className={`${inputClass} mb-3 block`} />
 
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               aria-label={t.password} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              placeholder={t.password} className="mb-3 block" style={inputStyle} />
+              placeholder={t.password} className={`${inputClass} mb-3 block`} />
 
-            {error && <p className="text-xs mb-3" style={{ color: '#FF3D57' }}>{error}</p>}
+            {error && <p className="text-xs mb-3 text-danger">{error}</p>}
 
             {!magicSent ? (
               <button onClick={() => { if (email) setMagicSent(true); }}
@@ -145,20 +129,15 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
 
             {(['personal', 'business'] as UserRole[]).map(r => (
               <button key={r} onClick={() => setRole(r)}
-                className="w-full flex items-start gap-4 p-4 text-left mb-3 transition-all"
-                style={{
-                  background: role === r ? 'rgba(255,214,0,0.06)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${role === r ? 'rgba(255,214,0,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                  borderRadius: 6,
-                  boxShadow: role === r ? '3px 3px 0 rgba(255,214,0,0.2)' : 'none',
-                }}>
+                className={`w-full flex items-start gap-4 p-4 text-left mb-3 transition-all panel-card ${role === r ? 'surface-subtle' : ''}`}
+                style={{ boxShadow: role === r ? '3px 3px 0 color-mix(in srgb, var(--color-primary) 20%, transparent)' : 'none' }}>
                 <div className="text-3xl mt-0.5">{r === 'personal' ? '👤' : '🏪'}</div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-display font-semibold text-sm text-foreground">
                       {r === 'personal' ? t.personalAccount : t.businessAccount}
                     </span>
-                    {role === r && <span className="font-pixel text-[8px] px-1.5 py-0.5" style={{ background: '#FFD600', color: '#06071A', borderRadius: 2 }}>✓</span>}
+                    {role === r && <span className="font-pixel text-[8px] px-1.5 py-0.5 bg-primary text-primary-foreground" style={{ borderRadius: 2 }}>✓</span>}
                   </div>
                   <p className="text-xs text-muted-foreground">{r === 'personal' ? t.personalDesc : t.businessDesc}</p>
                   {r === 'business' && (
@@ -189,14 +168,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
                 <div className="flex gap-2 mb-4">
                   {(['id', 'passport'] as const).map(type => (
                     <button key={type} onClick={() => setVerifyType(type)}
-                      className="flex-1 py-2.5 text-sm font-semibold transition-all"
-                      style={{
-                        background: verifyType === type ? 'rgba(255,214,0,0.08)' : 'transparent',
-                        border: `1px solid ${verifyType === type ? 'rgba(255,214,0,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                        borderRadius: 4,
-                        color: verifyType === type ? '#FFD600' : '#7880AA',
-                        fontFamily: "'Chakra Petch', sans-serif",
-                      }}>
+                      className={`flex-1 py-2.5 text-sm font-semibold transition-all font-display chip-btn ${verifyType === type ? 'chip-btn-active' : ''}`}>
                       {type === 'id' ? `🪪 ${t.idCard}` : `📗 ${t.passport}`}
                     </button>
                   ))}
@@ -210,9 +182,9 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
                     <button key={u.label} onClick={u.onUp}
                       className="aspect-[4/3] flex flex-col items-center justify-center gap-2 text-center p-3 transition-all"
                       style={{
-                        border: `2px dashed ${u.done ? 'rgba(0,230,118,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                        border: `2px dashed ${u.done ? 'color-mix(in srgb, var(--color-success) 50%, transparent)' : 'var(--color-border)'}`,
                         borderRadius: 4,
-                        background: u.done ? 'rgba(0,230,118,0.06)' : 'rgba(255,255,255,0.02)',
+                        background: u.done ? 'color-mix(in srgb, var(--color-success) 6%, transparent)' : 'var(--color-muted)',
                       }}>
                       <div className="text-2xl">{u.done ? '✅' : '📷'}</div>
                       <span className="text-xs text-muted-foreground">{u.done ? t.uploaded : u.label}</span>
@@ -220,8 +192,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
                   ))}
                 </div>
 
-                <div className="p-3 mb-5 flex gap-2 text-xs text-muted-foreground"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4 }}>
+                <div className="p-3 mb-5 flex gap-2 text-xs text-muted-foreground detail-stat">
                   <span>🔒</span><span>{t.secureNote}</span>
                 </div>
 

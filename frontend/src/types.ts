@@ -4,6 +4,7 @@ export type UserRole = 'personal' | 'business';
 export type ListingStatus = 'draft' | 'active' | 'reserved' | 'sold' | 'hidden' | 'completed';
 export type AppLang = 'th' | 'en';
 export type Currency = 'THB' | 'USD';
+export type { ThemePreference } from './lib/theme';
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'ultra' | 'secret';
 
 export interface User {

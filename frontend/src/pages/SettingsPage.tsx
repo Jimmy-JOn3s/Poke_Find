@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import type { AppLang, Currency, User } from '../types';
+import type { AppLang, Currency, ThemePreference, User } from '../types';
 import { i18n } from '../i18n';
 import LocaleCurrencySwitcher from '../components/LocaleCurrencySwitcher';
+import ThemeSwitcher from '../components/ThemeSwitcher';
 
 interface Props {
   lang: AppLang;
   onLangChange: (l: AppLang) => void;
   currency: Currency;
   onCurrencyChange: (currency: Currency) => void;
+  theme: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
   currentUser: User | null;
   isAuthenticated: boolean;
   onSignOut: () => void;
   onSignIn: () => void;
 }
 
-export default function SettingsPage({ lang, onLangChange, currency, onCurrencyChange, currentUser, isAuthenticated, onSignOut, onSignIn }: Props) {
+export default function SettingsPage({ lang, onLangChange, currency, onCurrencyChange, theme, onThemeChange, currentUser, isAuthenticated, onSignOut, onSignIn }: Props) {
   const t = i18n[lang];
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(false);
@@ -22,14 +25,15 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
   const [priceAlert, setPriceAlert] = useState(false);
 
   const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) => (
-    <button type="button" aria-label={label} aria-pressed={value} onClick={onChange} className="toggle shrink-0" style={{ background: value ? '#FFD600' : 'rgba(255,255,255,0.12)' }}>
-      <div className="toggle-thumb" style={{ left: value ? 'calc(100% - 20px)' : '3px', background: value ? '#06071A' : 'white' }} />
+    <button type="button" aria-label={label} aria-pressed={value} onClick={onChange}
+      className={`toggle shrink-0 ${value ? 'toggle-on' : 'toggle-off'}`}>
+      <div className={`toggle-thumb ${value ? 'toggle-thumb-on' : 'toggle-thumb-off'}`} />
     </button>
   );
 
   const SectionHeader = ({ label }: { label: string }) => (
-    <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <p className="font-pixel text-[8px] uppercase tracking-widest" style={{ color: '#FFD600' }}>{label}</p>
+    <div className="px-4 py-2.5 panel-divider">
+      <p className="font-pixel text-[8px] uppercase tracking-widest section-label">{label}</p>
     </div>
   );
 
@@ -44,27 +48,25 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
         <span className="text-xs text-muted-foreground shrink-0">›</span>
       ))}
     </>;
-    const rowClass = "w-full min-w-0 flex items-center gap-3 px-4 py-3.5 text-left transition-colors";
-    const rowStyle = { borderBottom: '1px solid rgba(255,255,255,0.05)' };
+    const rowClass = "w-full min-w-0 flex items-center gap-3 px-4 py-3.5 text-left transition-colors panel-divider";
     return onClick
-      ? <button type="button" onClick={onClick} className={`${rowClass} hover:bg-white/[0.03]`} style={rowStyle}>{content}</button>
-      : <div className={rowClass} style={rowStyle}>{content}</div>;
+      ? <button type="button" onClick={onClick} className={`${rowClass} hover:bg-[var(--color-row-hover)]`}>{content}</button>
+      : <div className={rowClass}>{content}</div>;
   };
 
   return (
     <div className="page-shell bg-background pixel-bg">
-      <div className="page-container px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
-        style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
-        <h1 className="font-display text-xl font-bold" style={{ color: '#FFD600', textShadow: '0 0 12px rgba(255,214,0,0.4)' }}>{t.settingsTitle}</h1>
+      <div className="page-container px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0 page-header-bar">
+        <h1 className="font-display text-xl font-bold page-title">{t.settingsTitle}</h1>
       </div>
 
       <div className="page-scroll scroll-end-buffer space-y-4 px-4 md:px-6 lg:px-8 pt-4 page-container max-w-2xl w-full">
         {/* Account */}
         {isAuthenticated && currentUser && (
           <div className="panel-card overflow-hidden">
-            <div className="flex items-center gap-3 p-4 min-w-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center gap-3 p-4 min-w-0 panel-divider">
               <div className="w-12 h-12 flex items-center justify-center text-lg font-bold shrink-0"
-                style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 6, boxShadow: '2px 2px 0 rgba(255,46,189,0.3)' }}>
+                style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 6, boxShadow: '2px 2px 0 var(--color-shadow-accent)' }}>
                 {currentUser.avatar}
               </div>
               <div className="min-w-0 flex-1">
@@ -81,6 +83,14 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
               sublabel={currentUser.verified ? t.verified : t.verifyToSell} />
           </div>
         )}
+
+        {/* Appearance */}
+        <div className="panel-card">
+          <SectionHeader label={t.appearance} />
+          <div className="p-4 pb-5">
+            <ThemeSwitcher lang={lang} theme={theme} onThemeChange={onThemeChange} />
+          </div>
+        </div>
 
         {/* Notifications */}
         <div className="panel-card overflow-hidden">
@@ -108,8 +118,7 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
         {/* Sign out / in */}
         {isAuthenticated ? (
           <button onClick={onSignOut}
-            className="w-full py-4 text-sm font-bold font-display transition-all"
-            style={{ border: '1px solid rgba(255,61,87,0.3)', color: '#FF3D57', background: 'rgba(255,61,87,0.06)', borderRadius: 4 }}>
+            className="w-full py-4 text-sm font-bold font-display transition-all btn-danger-outline">
             ← {t.signOut}
           </button>
         ) : (

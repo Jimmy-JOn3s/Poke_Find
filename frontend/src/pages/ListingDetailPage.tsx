@@ -43,19 +43,18 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
         <div className="relative z-10 text-8xl md:text-9xl" style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.7))' }}>{listing.typeIcon}</div>
 
         <button onClick={onBack}
-          className="absolute top-12 md:top-4 left-4 z-20 w-9 h-9 flex items-center justify-center font-display"
-          style={{ background: 'rgba(6,7,26,0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 4 }}>
+          className="absolute top-12 md:top-4 left-4 z-20 w-9 h-9 flex items-center justify-center font-display icon-btn">
           ←
         </button>
 
         <button onClick={() => setLiked(!liked)}
-          className="absolute top-12 md:top-4 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all"
-          style={{ background: liked ? 'rgba(255,46,189,0.3)' : 'rgba(6,7,26,0.8)', backdropFilter: 'blur(12px)', border: `1px solid ${liked ? 'rgba(255,46,189,0.5)' : 'rgba(255,255,255,0.12)'}`, borderRadius: 4, color: liked ? '#FF2EBD' : '#F0F0FF' }}>
+          className={`absolute top-12 md:top-4 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all icon-btn ${liked ? 'text-accent' : ''}`}
+          style={liked ? { background: 'color-mix(in srgb, var(--color-accent) 30%, transparent)', borderColor: 'color-mix(in srgb, var(--color-accent) 50%, transparent)' } : undefined}>
           ♥
         </button>
 
-        <div className="absolute bottom-4 left-4 font-pixel text-[9px] px-2 py-1"
-          style={{ background: 'rgba(6,7,26,0.9)', color: '#FFD600', border: '1px solid rgba(255,214,0,0.3)', borderRadius: 2 }}>
+        <div className="absolute bottom-4 left-4 font-pixel text-[9px] px-2 py-1 listing-badge text-primary"
+          style={{ border: '1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)' }}>
           {rarityLabel}
         </div>
       </div>
@@ -69,13 +68,11 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
             {isOwner && (
               <div className="flex gap-1.5 shrink-0">
                 <button onClick={() => onEditListing?.(listing)}
-                  className="px-2.5 py-1 text-xs font-bold font-display"
-                  style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 3, color: '#7880AA' }}>
+                  className="px-2.5 py-1 text-xs font-bold font-display chip-btn-outline">
                   {t.editListing}
                 </button>
                 <button onClick={() => setShowDelete(true)}
-                  className="px-2.5 py-1 text-xs font-bold font-display"
-                  style={{ border: '1px solid rgba(255,61,87,0.3)', borderRadius: 3, color: '#FF3D57' }}>
+                  className="px-2.5 py-1 text-xs font-bold font-display btn-danger-outline">
                   {t.deleteListing}
                 </button>
               </div>
@@ -84,8 +81,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           <p className="text-muted-foreground text-sm mb-3 font-mono">{listing.set} · #{listing.cardNumber}</p>
 
           {/* Price block */}
-          <div className="flex items-center justify-between p-4 mb-4"
-            style={{ background: 'rgba(255,214,0,0.05)', border: '1px solid rgba(255,214,0,0.2)', borderRadius: 6, boxShadow: '3px 3px 0 rgba(255,214,0,0.1)' }}>
+          <div className="flex items-center justify-between p-4 mb-4 price-block">
             <div>
               <p className="font-display text-xs text-muted-foreground mb-0.5">{t.listedPrice}</p>
               <Price amount={listing.listedPrice} currency={listing.currency} displayCurrency={displayCurrency} lang={lang}
@@ -105,9 +101,9 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
               { label: t.sellerType, value: listing.sellerRole === 'business' ? `🏪 ${t.business}` : `👤 ${t.personal}` },
               { label: t.views,     value: `${listing.views.toLocaleString()}` },
             ].map(({ label, value, color }) => (
-              <div key={label} className="p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4 }}>
+              <div key={label} className="p-3 detail-stat">
                 <p className="font-display text-xs text-muted-foreground mb-1">{label}</p>
-                <p className="font-display text-sm font-semibold" style={{ color: color || '#E8E8FF' }}>{value}</p>
+                <p className="font-display text-sm font-semibold text-foreground" style={color ? { color } : undefined}>{value}</p>
               </div>
             ))}
           </div>
@@ -115,10 +111,9 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           {/* Seller card */}
           {seller && (
             <button onClick={() => onViewProfile(listing.sellerId)}
-              className="w-full flex items-center gap-3 p-4 text-left mb-4 transition-all card-hover"
-              style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6 }}>
+              className="w-full flex items-center gap-3 p-4 text-left mb-4 transition-all card-hover panel-card">
               <div className="w-11 h-11 flex items-center justify-center text-base font-bold shrink-0"
-                style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 6 }}>
+                style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 6 }}>
                 {seller.avatar}
               </div>
               <div className="flex-1 min-w-0">
@@ -135,7 +130,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
                   <span>{t.sold} {seller.totalSold}</span>
                 </div>
               </div>
-              <span className="font-pixel text-[10px]" style={{ color: '#7880AA' }}>→</span>
+              <span className="font-pixel text-[10px] text-muted-foreground">→</span>
             </button>
           )}
 
@@ -150,7 +145,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
           {/* CTA — inline on desktop */}
           {!isOwner && (
-            <div className="hidden md:block mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,214,0,0.15)' }}>
+            <div className="hidden md:block mt-6 pt-4 panel-divider">
               <button onClick={() => onChat(listing)}
                 className="w-full max-w-md py-4 text-sm font-bold font-display flex items-center justify-center gap-2 btn-primary"
                 style={{ borderRadius: 4 }}>
@@ -163,8 +158,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
       {/* CTA — fixed bar on mobile */}
       {!isOwner && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 px-4 py-3"
-          style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,214,0,0.15)' }}>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 px-4 py-3 page-header-bar">
           <button onClick={() => onChat(listing)}
             className="w-full py-4 text-sm font-bold font-display flex items-center justify-center gap-2 btn-primary"
             style={{ borderRadius: 4 }}>
@@ -175,22 +169,19 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
       {/* Delete confirm */}
       {showDelete && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in p-0 md:p-4"
-          style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)' }}>
-          <div className="w-full max-w-lg p-5 border-t md:border rounded-t-lg md:rounded-lg"
-            style={{ background: '#0C0E28', borderColor: 'rgba(255,61,87,0.2)' }}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in p-0 md:p-4 modal-backdrop">
+          <div className="w-full max-w-lg p-5 border-t md:border rounded-t-lg md:rounded-lg modal-panel"
+            style={{ borderColor: 'var(--color-danger-border)' }}>
             <h3 className="font-display text-lg font-bold text-foreground mb-2">{t.deleteListing}</h3>
             <p className="text-muted-foreground text-sm mb-2">{t.deleteConfirm}</p>
             <p className="text-xs text-muted-foreground mb-5">{t.deleteWarning}</p>
             <div className="flex gap-3">
               <button onClick={() => setShowDelete(false)}
-                className="flex-1 py-3 text-sm font-bold font-display"
-                style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, color: '#7880AA' }}>
+                className="flex-1 py-3 text-sm font-bold font-display chip-btn-outline">
                 {t.cancel}
               </button>
               <button onClick={() => { onDeleteListing?.(listing.id); setShowDelete(false); onBack(); }}
-                className="flex-1 py-3 text-sm font-bold font-display"
-                style={{ background: 'rgba(255,61,87,0.12)', color: '#FF3D57', border: '1px solid rgba(255,61,87,0.3)', borderRadius: 4, boxShadow: '2px 2px 0 rgba(180,0,30,0.3)' }}>
+                className="flex-1 py-3 text-sm font-bold font-display btn-danger-outline">
                 {t.deleteListing}
               </button>
             </div>

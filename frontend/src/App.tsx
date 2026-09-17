@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { AppLang, Currency, Listing, Page, User, UserRole } from "./types";
+import type { AppLang, Currency, Listing, Page, ThemePreference, User, UserRole } from "./types";
+import { applyTheme, storedTheme, THEME_STORAGE_KEY } from "./lib/theme";
 import Navigation from "./components/Navigation";
 import CreateListingModal from "./components/CreateListingModal";
 import DiscoverPage from "./pages/DiscoverPage";
@@ -21,6 +22,7 @@ function storedPreference<T extends string>(key: string, fallback: T): T {
 export default function App() {
   const [lang, setLangState] = useState<AppLang>(() => storedPreference("pokefind.language", "th"));
   const [currency, setCurrencyState] = useState<Currency>(() => storedPreference("pokefind.currency", "THB"));
+  const [theme, setThemeState] = useState<ThemePreference>(() => storedTheme());
   const [currentPage, setCurrentPage] = useState<Page>("discover");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -33,6 +35,18 @@ export default function App() {
   const { listings, loading, error, reload, create, remove, setListings } = useListings();
 
   const isAuthenticated = Boolean(currentUser);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (theme !== "system") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyTheme("system");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [theme]);
 
   useEffect(() => {
     api.me().then(user => {
@@ -53,6 +67,12 @@ export default function App() {
     setCurrencyState(next);
     localStorage.setItem("pokefind.currency", next);
     if (isAuthenticated) void api.updateMe({ preferred_currency: next });
+  };
+
+  const setTheme = (next: ThemePreference) => {
+    setThemeState(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    applyTheme(next);
   };
 
   const handleAuth = async (role: UserRole, name: string, email: string, password: string, mode: "signin" | "signup") => {
@@ -160,6 +180,7 @@ export default function App() {
           onViewAnalytics={() => setCurrentPage("analytics")} />;
       case "settings":
         return <SettingsPage lang={lang} onLangChange={setLang} currency={currency} onCurrencyChange={setCurrency}
+          theme={theme} onThemeChange={setTheme}
           currentUser={currentUser} isAuthenticated={isAuthenticated} onSignOut={handleSignOut} onSignIn={() => setCurrentPage("auth")} />;
       case "analytics":
         return <AnalyticsPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("profile")} />;
@@ -175,8 +196,7 @@ export default function App() {
   const showNav = currentPage !== "auth" && currentPage !== "listing";
   return (
     <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
-      {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs"
-        style={{ background: "#3a0b19", border: "1px solid #FF3D57", color: "#fff", borderRadius: 4 }}>{actionError} · ✕</button>}
+      {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{actionError} · ✕</button>}
       {showNav && <Navigation current={currentPage} onNav={handleNav} isAuthenticated={isAuthenticated} lang={lang} unreadChats={0} />}
       <main className={`flex-1 overflow-hidden flex flex-col min-w-0 ${showNav ? "bottom-safe md:bottom-0 md:pl-56" : ""}`}>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>

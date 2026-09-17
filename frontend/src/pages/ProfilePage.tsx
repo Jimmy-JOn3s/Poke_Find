@@ -57,17 +57,16 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
   return (
     <div className="flex flex-col min-h-full bg-background">
       {/* Profile hero */}
-      <div className="relative page-header pixel-bg"
-        style={{ background: 'linear-gradient(160deg, #1A0A3D 0%, #06071A 70%)' }}>
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(59,24,116,0.5) 0%, transparent 70%)' }} />
+      <div className="relative page-header pixel-bg profile-hero">
+        <div className="absolute inset-0 profile-hero-glow" />
         <div className="relative page-container px-4 md:px-6 lg:px-8 pb-5 flex flex-col items-center text-center">
           {/* Avatar */}
           <div className="w-18 h-18 w-[72px] h-[72px] flex items-center justify-center text-2xl font-bold mb-3 relative"
-            style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 8, boxShadow: '3px 3px 0 rgba(255,46,189,0.4)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 8, boxShadow: '3px 3px 0 var(--color-shadow-accent)' }}>
             {profileUser.avatar}
             {profileUser.verified && (
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 flex items-center justify-center text-xs border-2"
-                style={{ background: '#00E676', borderColor: '#06071A', color: '#06071A', fontWeight: 900, borderRadius: 3 }}>✓</div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 flex items-center justify-center text-xs border-2 bg-success text-primary-foreground font-black"
+                style={{ borderColor: 'var(--color-background)', borderRadius: 3 }}>✓</div>
             )}
           </div>
 
@@ -80,7 +79,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
           {/* Verification */}
           <div className="flex items-center gap-3 text-xs mb-2">
             {profileUser.verified ? (
-              <span className="font-display flex items-center gap-1" style={{ color: '#00E676' }}>
+              <span className="font-display flex items-center gap-1 text-success">
                 ✓ {t.verified} {profileUser.verifiedType === 'passport' ? `(${t.passport})` : `(${t.idCard})`}
               </span>
             ) : (
@@ -95,15 +94,14 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
           )}
 
           {/* Stats bar */}
-          <div className="flex w-full max-w-sm overflow-hidden"
-            style={{ border: '1px solid rgba(255,214,0,0.15)', borderRadius: 4, background: 'rgba(255,255,255,0.03)', boxShadow: '2px 2px 0 rgba(255,214,0,0.08)' }}>
+          <div className="flex w-full max-w-sm overflow-hidden stats-bar">
             {[
               { label: t.totalSold, value: profileUser.totalSold.toLocaleString() },
               { label: t.rating,    value: `★ ${profileUser.rating}` },
               { label: t.reviews,   value: profileUser.reviewCount.toString() },
             ].map((stat, i) => (
-              <div key={stat.label} className="flex-1 py-3 text-center" style={{ borderRight: i < 2 ? '1px solid rgba(255,214,0,0.1)' : undefined }}>
-                <p className="font-mono font-bold text-base" style={{ color: '#FFD600' }}>{stat.value}</p>
+              <div key={stat.label} className={`flex-1 py-3 text-center ${i < 2 ? 'stats-bar-divider' : ''}`}>
+                <p className="font-mono font-bold text-base text-primary">{stat.value}</p>
                 <p className="text-[10px] text-muted-foreground font-display">{stat.label}</p>
               </div>
             ))}
@@ -115,8 +113,8 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
       {isOwnProfile && profileUser.role === 'business' && (
         <div className="page-container px-4 md:px-6 lg:px-8 pt-3">
           <button onClick={onViewAnalytics}
-            className="w-full flex items-center justify-between p-4 transition-all"
-            style={{ background: 'rgba(255,214,0,0.05)', border: '1px solid rgba(255,214,0,0.2)', borderRadius: 6, boxShadow: '2px 2px 0 rgba(255,214,0,0.1)' }}>
+            className="w-full flex items-center justify-between p-4 transition-all surface-subtle"
+            style={{ borderRadius: 6, boxShadow: '2px 2px 0 color-mix(in srgb, var(--color-primary) 10%, transparent)' }}>
             <div className="flex items-center gap-3">
               <div className="text-xl">📊</div>
               <div className="text-left">
@@ -124,7 +122,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
                 <p className="text-xs text-muted-foreground">{t.businessOnly}</p>
               </div>
             </div>
-            <span className="font-pixel text-[10px]" style={{ color: '#FFD600' }}>→</span>
+            <span className="font-pixel text-[10px] text-primary">→</span>
           </button>
         </div>
       )}
@@ -133,14 +131,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
       <div className="page-container flex px-4 md:px-6 lg:px-8 pt-3 gap-2 max-w-2xl">
         {(['listings', 'reviews'] as const).map(tabId => (
           <button key={tabId} onClick={() => setTab(tabId)}
-            className="flex-1 py-2.5 text-sm font-bold font-display transition-all"
-            style={{
-              background: tab === tabId ? 'rgba(255,214,0,0.1)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${tab === tabId ? 'rgba(255,214,0,0.4)' : 'rgba(255,255,255,0.07)'}`,
-              borderRadius: 4,
-              color: tab === tabId ? '#FFD600' : '#7880AA',
-              boxShadow: tab === tabId ? '2px 2px 0 rgba(255,214,0,0.15)' : 'none',
-            }}>
+            className={`flex-1 py-2.5 text-sm font-bold font-display transition-all tab-btn ${tab === tabId ? 'tab-btn-active' : ''}`}>
             {tabId === 'listings' ? `${t.activeListings} (${userListings.length})` : `${t.reviews} (${reviews.length})`}
           </button>
         ))}
@@ -157,24 +148,25 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
             ) : (
               userListings.map(listing => (
                 <button key={listing.id} onClick={() => onSelectListing(listing)}
-                  className="text-left overflow-hidden transition-all card-hover"
+                  className="text-left overflow-hidden transition-all card-hover listing-card"
                   style={{
-                    background: '#0C0E28', borderRadius: 6,
-                    border: `1px solid ${listing.status === 'completed' ? 'rgba(0,230,118,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    borderColor: listing.status === 'completed'
+                      ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
+                      : undefined,
                   }}>
                   <div className="relative aspect-square flex items-center justify-center scanlines"
                     style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}33, ${listing.gradientTo}44)` }}>
                     <span className="text-4xl">{listing.typeIcon}</span>
                     {listing.status === 'completed' && (
                       <div className="absolute inset-0 flex items-center justify-center"
-                        style={{ background: 'rgba(0,230,118,0.12)' }}>
-                        <span className="font-pixel text-[8px] px-2 py-1" style={{ background: 'rgba(0,230,118,0.9)', color: '#06071A', borderRadius: 2 }}>✓ {t.sold}</span>
+                        style={{ background: 'color-mix(in srgb, var(--color-success) 12%, transparent)' }}>
+                        <span className="font-pixel text-[8px] px-2 py-1 badge-verified">✓ {t.sold}</span>
                       </div>
                     )}
                   </div>
                   <div className="p-2">
                     <p className="font-display text-xs font-semibold text-foreground line-clamp-1 mb-0.5">{listing.productName}</p>
-                    <Price amount={listing.listedPrice} currency={listing.currency ?? 'THB'} displayCurrency={displayCurrency} lang={lang} className="text-sm font-bold font-mono" />
+                    <Price amount={listing.listedPrice} currency={listing.currency ?? 'THB'} displayCurrency={displayCurrency} lang={lang} className="text-sm font-bold font-mono text-primary" />
                   </div>
                 </button>
               ))
@@ -190,11 +182,10 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
               </div>
             ) : (
               reviews.map(review => (
-                <div key={review.id} className="p-4"
-                  style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6 }}>
+                <div key={review.id} className="p-4 panel-card">
                   <div className="flex items-start gap-3 mb-2">
                     <div className="w-9 h-9 flex items-center justify-center text-sm font-bold shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #3B1874, #FF2EBD)', color: '#fff', borderRadius: 4 }}>
+                      style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 4 }}>
                       {review.reviewerAvatar}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -205,7 +196,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="flex">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <span key={i} className="font-pixel text-[10px]" style={{ color: i < review.rating ? '#FFD600' : '#2A2D50' }}>★</span>
+                            <span key={i} className="font-pixel text-[10px]" style={{ color: i < review.rating ? 'var(--color-primary)' : 'var(--color-star-inactive)' }}>★</span>
                           ))}
                         </div>
                         <span className="text-[10px] text-muted-foreground font-mono">{review.date}</span>

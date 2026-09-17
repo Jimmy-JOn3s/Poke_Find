@@ -48,29 +48,19 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
   const canNext1 = productName.trim() && set && cardNumber.trim();
   const canNext2 = price && parseInt(price) > 0;
 
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    borderRadius: 4,
-    color: '#F0F0FF',
-    fontFamily: "'Sarabun', sans-serif",
-    fontSize: 14,
-    width: '100%',
-    padding: '12px 16px',
-  };
+  const inputClass = 'field-input font-body';
 
   const conditionColor = (c: CardCondition) =>
     ({ M: '#00E676', NM: '#69F0AE', LP: '#FFD600', MP: '#FF9800', HP: '#FF3D57' }[c]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in modal-above-nav p-0 md:p-4"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(14px)' }}>
-      <div className="w-full max-w-lg flex flex-col rounded-t-lg md:rounded-lg max-h-[90vh] md:max-h-[85vh]"
-        style={{ background: '#090B22', border: '1px solid rgba(255,214,0,0.15)', boxShadow: '0 -3px 0 rgba(255,214,0,0.12)' }}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in modal-above-nav p-0 md:p-4 modal-backdrop">
+      <div className="w-full max-w-lg flex flex-col rounded-t-lg md:rounded-lg max-h-[90vh] md:max-h-[85vh] modal-panel"
+        style={{ boxShadow: '0 -3px 0 color-mix(in srgb, var(--color-primary) 12%, transparent)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0 panel-divider">
           <div>
-            <p className="font-pixel text-[8px] mb-1" style={{ color: '#FF2EBD' }}>
+            <p className="font-pixel text-[8px] mb-1 text-accent">
               {t.step} {step} {t.of} {totalSteps}
             </p>
             <h2 className="font-display text-lg font-bold text-foreground">
@@ -78,15 +68,14 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
             </h2>
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 4 }}>✕</button>
+            className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground chip-btn-outline">✕</button>
         </div>
 
         {/* Progress */}
         <div className="flex gap-1 px-5 py-2.5 shrink-0">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="flex-1 h-1 transition-all"
-              style={{ background: step > i ? '#FFD600' : 'rgba(255,255,255,0.08)', borderRadius: 1 }} />
+              style={{ background: step > i ? 'var(--color-primary)' : 'var(--color-toggle-off)', borderRadius: 1 }} />
           ))}
         </div>
 
@@ -96,42 +85,35 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
           {step === 1 && (
             <div className="flex flex-col gap-4 pt-2 animate-slide-up">
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.productName}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.productName}</label>
                 <input type="text" value={productName} onChange={e => setProductName(e.target.value)}
                   aria-label={t.productName}
                   placeholder={lang === 'th' ? 'เช่น Charizard ex (Full Art)' : 'e.g. Charizard ex (Full Art)'}
-                  style={inputStyle} />
+                  className={inputClass} />
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.set}</label>
-                <select value={set} onChange={e => setSet(e.target.value)} aria-label={t.set} style={{ ...inputStyle }}>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.set}</label>
+                <select value={set} onChange={e => setSet(e.target.value)} aria-label={t.set} className={inputClass}>
                   <option value="">{t.selectSet}</option>
                   {SETS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.cardNumber}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.cardNumber}</label>
                 <input type="text" value={cardNumber} onChange={e => setCardNumber(e.target.value)}
                   aria-label={t.cardNumber}
                   placeholder="125/197"
-                  style={{ ...inputStyle, fontFamily: "'DM Mono', monospace" }} />
+                  className={`${inputClass} font-mono`} />
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.language}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.language}</label>
                 <div className="flex gap-2">
                   {LANGUAGES.map(l => (
                     <button key={l.value} onClick={() => setCardLang(l.value)}
-                      className="flex-1 py-3 text-sm font-bold font-display transition-all"
-                      style={{
-                        background: cardLang === l.value ? 'rgba(255,214,0,0.1)' : 'transparent',
-                        border: `1px solid ${cardLang === l.value ? 'rgba(255,214,0,0.4)' : 'rgba(255,255,255,0.09)'}`,
-                        borderRadius: 4,
-                        color: cardLang === l.value ? '#FFD600' : '#7880AA',
-                        boxShadow: cardLang === l.value ? '2px 2px 0 rgba(255,214,0,0.15)' : 'none',
-                      }}>
+                      className={`flex-1 py-3 text-sm font-bold font-display transition-all chip-btn ${cardLang === l.value ? 'chip-btn-active' : ''}`}>
                       {l.flag} {t[l.value]}
                     </button>
                   ))}
@@ -139,17 +121,11 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.typeIconLabel}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.typeIconLabel}</label>
                 <div className="flex flex-wrap gap-2">
                   {TYPE_ICONS.map(icon => (
                     <button key={icon} onClick={() => setTypeIcon(icon)}
-                      className="w-10 h-10 text-xl flex items-center justify-center transition-all"
-                      style={{
-                        background: typeIcon === icon ? 'rgba(255,214,0,0.12)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${typeIcon === icon ? 'rgba(255,214,0,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                        borderRadius: 4,
-                        boxShadow: typeIcon === icon ? '2px 2px 0 rgba(255,214,0,0.2)' : 'none',
-                      }}>
+                      className={`w-10 h-10 text-xl flex items-center justify-center transition-all chip-btn ${typeIcon === icon ? 'chip-btn-active' : ''}`}>
                       {icon}
                     </button>
                   ))}
@@ -158,7 +134,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
 
               {!editListing && (
                 <div>
-                  <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>
+                  <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">
                     {lang === 'th' ? 'สีการ์ด' : 'Card Color'}
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -168,8 +144,8 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
                         style={{
                           background: `linear-gradient(135deg, ${from}, ${to})`,
                           borderRadius: 4,
-                          border: gradIdx === i ? '2px solid #FFD600' : '2px solid transparent',
-                          boxShadow: gradIdx === i ? '0 0 6px rgba(255,214,0,0.5)' : 'none',
+                          border: gradIdx === i ? '2px solid var(--color-primary)' : '2px solid transparent',
+                          boxShadow: gradIdx === i ? '0 0 6px color-mix(in srgb, var(--color-primary) 50%, transparent)' : 'none',
                         }} />
                     ))}
                   </div>
@@ -182,57 +158,48 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
           {step === 2 && (
             <div className="flex flex-col gap-4 pt-2 animate-slide-up">
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.condition}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.condition}</label>
                 <div className="flex flex-col gap-2">
                   {CONDITIONS.map(c => (
                     <button key={c.value} onClick={() => setCondition(c.value)}
-                      className="flex items-center gap-3 px-4 py-3 text-left transition-all"
-                      style={{
-                        background: condition === c.value ? 'rgba(255,214,0,0.05)' : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${condition === c.value ? 'rgba(255,214,0,0.35)' : 'rgba(255,255,255,0.07)'}`,
-                        borderRadius: 4,
-                        boxShadow: condition === c.value ? '2px 2px 0 rgba(255,214,0,0.15)' : 'none',
-                      }}>
+                      className={`flex items-center gap-3 px-4 py-3 text-left transition-all chip-btn ${condition === c.value ? 'chip-btn-active' : ''}`}>
                       <span className="font-pixel text-[9px] w-8" style={{ color: conditionColor(c.value) }}>{c.value}</span>
-                      <span className="font-display text-sm" style={{ color: condition === c.value ? '#FFD600' : '#E8E8FF' }}>{t[c.value]}</span>
-                      {condition === c.value && <span className="ml-auto font-pixel text-[8px]" style={{ color: '#FFD600' }}>✓</span>}
+                      <span className={`font-display text-sm ${condition === c.value ? 'text-primary' : 'text-foreground'}`}>{t[c.value]}</span>
+                      {condition === c.value && <span className="ml-auto font-pixel text-[8px] text-primary">✓</span>}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.listedPrice}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.listedPrice}</label>
                 <div className="flex gap-2 mb-2">
                   {(['THB', 'USD'] as Currency[]).map(code => (
-                    <button key={code} onClick={() => setCurrency(code)} className="flex-1 py-2 text-xs font-bold"
-                      style={{ border: `1px solid ${currency === code ? '#FFD600' : 'rgba(255,255,255,0.09)'}`, color: currency === code ? '#FFD600' : '#7880AA', borderRadius: 4 }}>
+                    <button key={code} onClick={() => setCurrency(code)}
+                      className={`flex-1 py-2 text-xs font-bold chip-btn ${currency === code ? 'chip-btn-active' : ''}`}>
                       {code} {code === 'THB' ? '฿' : '$'}
                     </button>
                   ))}
                 </div>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold font-mono" style={{ color: '#FFD600' }}>{currency === 'THB' ? '฿' : '$'}</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold font-mono text-primary">{currency === 'THB' ? '฿' : '$'}</span>
                   <input type="number" value={price} onChange={e => setPrice(e.target.value)}
                     aria-label={`${t.listedPrice} (${currency})`}
                     placeholder="0"
-                    style={{ ...inputStyle, paddingLeft: 32, textAlign: 'right', fontFamily: "'DM Mono', monospace" }} />
+                    className={`${inputClass} font-mono pl-8 text-right`} />
                 </div>
               </div>
 
               <div>
-                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block" style={{ color: '#FFD600' }}>{t.quantity}</label>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.quantity}</label>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setQuantity(q => Math.max(1, parseInt(q) - 1).toString())}
-                    className="w-11 h-11 text-xl font-display flex items-center justify-center"
-                    style={{ border: '1px solid rgba(255,255,255,0.09)', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: '#E8E8FF' }}>−</button>
+                    className="w-11 h-11 text-xl font-display flex items-center justify-center chip-btn-outline text-foreground">−</button>
                   <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} min="1"
                     aria-label={t.quantity}
-                    className="flex-1 text-center text-lg font-mono text-foreground"
-                    style={{ ...inputStyle, textAlign: 'center', padding: '12px' }} />
+                    className={`flex-1 text-lg font-mono ${inputClass} text-center`} />
                   <button onClick={() => setQuantity(q => (parseInt(q) + 1).toString())}
-                    className="w-11 h-11 text-xl font-display flex items-center justify-center"
-                    style={{ border: '1px solid rgba(255,255,255,0.09)', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: '#E8E8FF' }}>+</button>
+                    className="w-11 h-11 text-xl font-display flex items-center justify-center chip-btn-outline text-foreground">+</button>
                 </div>
               </div>
             </div>
@@ -241,10 +208,10 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
           {/* Step 3: Preview */}
           {step === 3 && (
             <div className="flex flex-col gap-4 pt-2 animate-slide-up">
-              <p className="font-pixel text-[8px] uppercase tracking-wider" style={{ color: '#FFD600' }}>{t.previewLabel}</p>
+              <p className="font-pixel text-[8px] uppercase tracking-wider section-label">{t.previewLabel}</p>
 
               {/* Preview card */}
-              <div style={{ background: '#0C0E28', border: '1px solid rgba(255,214,0,0.3)', borderRadius: 6, overflow: 'hidden', boxShadow: '3px 3px 0 rgba(255,214,0,0.15)' }}>
+              <div className="listing-card overflow-hidden price-block">
                 <div className="aspect-[2.5/1.5] flex items-center justify-center relative scanlines"
                   style={{ background: `linear-gradient(135deg, ${gradientFrom}33, ${gradientTo}55)` }}>
                   <span className="text-6xl">{typeIcon}</span>
@@ -258,21 +225,20 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
                       { label: t.language, value: cardLang.toUpperCase() },
                       { label: t.quantity, value: quantity },
                     ].map(d => (
-                      <div key={d.label} className="p-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 3 }}>
+                      <div key={d.label} className="p-2 detail-stat">
                         <p className="font-display text-[10px] text-muted-foreground">{d.label}</p>
-                        <p className="font-mono text-sm font-bold" style={{ color: d.color || '#E8E8FF' }}>{d.value}</p>
+                        <p className="font-mono text-sm font-bold text-foreground" style={d.color ? { color: d.color } : undefined}>{d.value}</p>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="mt-3 pt-3 flex items-center justify-between panel-divider">
                     <span className="font-display text-sm text-muted-foreground">{t.listedPrice}</span>
-                    <span className="text-2xl font-bold font-mono" style={{ color: '#FFD600' }}>{currency === 'THB' ? '฿' : '$'}{parseFloat(price || '0').toLocaleString()}</span>
+                    <span className="text-2xl font-bold font-mono text-primary">{currency === 'THB' ? '฿' : '$'}{parseFloat(price || '0').toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 flex gap-2 text-xs text-muted-foreground"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4 }}>
+              <div className="p-3 flex gap-2 text-xs text-muted-foreground detail-stat">
                 <span>ℹ️</span><span>{t.negotiationNote}</span>
               </div>
             </div>
@@ -280,11 +246,10 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-5 pt-3 shrink-0 flex gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-5 pb-5 pt-3 shrink-0 flex gap-3 panel-divider">
           {step > 1 && (
             <button onClick={() => setStep(s => s - 1)}
-              className="flex-1 py-3.5 text-sm font-bold font-display"
-              style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, color: '#7880AA' }}>
+              className="flex-1 py-3.5 text-sm font-bold font-display chip-btn-outline">
               ← {t.back}
             </button>
           )}

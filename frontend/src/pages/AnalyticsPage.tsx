@@ -41,8 +41,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
         <div className="text-5xl mb-4">🔒</div>
         <h2 className="font-display text-lg font-bold text-foreground mb-2">{t.businessOnly}</h2>
         <p className="text-muted-foreground text-sm mb-6">{lang === 'th' ? 'ฟีเจอร์นี้ใช้ได้เฉพาะบัญชีธุรกิจที่ยืนยันแล้ว' : 'This feature is only available for verified business accounts'}</p>
-        <button onClick={onBack} className="px-6 py-3 text-sm font-bold font-display"
-          style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 4, color: '#7880AA' }}>
+        <button onClick={onBack} className="px-6 py-3 text-sm font-bold font-display chip-btn-outline">
           {t.back}
         </button>
       </div>
@@ -57,13 +56,11 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
   return (
     <div className="page-shell bg-background pixel-bg">
       {/* Header */}
-      <div className="page-container flex items-center gap-3 px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
-        style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
+      <div className="page-container flex items-center gap-3 px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0 page-header-bar">
         <button onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground"
-          style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, background: 'rgba(255,255,255,0.05)' }}>←</button>
+          className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground chip-btn-outline">←</button>
         <div>
-          <h1 className="font-display text-lg font-bold" style={{ color: '#FFD600', textShadow: '0 0 10px rgba(255,214,0,0.4)' }}>{t.analyticsTitle}</h1>
+          <h1 className="font-display text-lg font-bold page-title">{t.analyticsTitle}</h1>
           <p className="text-xs text-muted-foreground font-mono">{t.lastSixMonths}</p>
         </div>
       </div>
@@ -77,8 +74,8 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
             { label: t.activeListings, value: myListings.length.toString(), sub: `${myListings.filter(l => l.status === 'active').length} ${t.available}`, color: '#00E676', icon: '📦' },
             { label: t.avgRating, value: `★ ${currentUser.rating}`, sub: `${currentUser.reviewCount} ${t.reviews}`, color: '#FFB300', icon: '⭐' },
           ].map(kpi => (
-            <div key={kpi.label} className="p-4"
-              style={{ background: '#0C0E28', border: `1px solid ${kpi.color}22`, borderRadius: 6, boxShadow: `2px 2px 0 ${kpi.color}20` }}>
+            <div key={kpi.label} className="p-4 panel-card"
+              style={{ borderColor: `color-mix(in srgb, ${kpi.color} 13%, transparent)`, boxShadow: `2px 2px 0 color-mix(in srgb, ${kpi.color} 12%, transparent)` }}>
               <div className="text-xl mb-2">{kpi.icon}</div>
               <p className="text-2xl font-bold font-mono" style={{ color: kpi.color }}>{kpi.value}</p>
               <p className="font-display text-xs text-muted-foreground mt-0.5">{kpi.label}</p>
@@ -88,7 +85,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
         </div>
 
         {/* Revenue chart */}
-        <div className="p-4" style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6 }}>
+        <div className="p-4 panel-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-semibold text-sm text-foreground">{t.revenue}</h2>
             <span className="text-xs text-muted-foreground font-mono">฿{totalRevenue.toLocaleString()}</span>
@@ -102,7 +99,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
                   <div className="w-full transition-all"
                     style={{
                       height: `${pct}%`, minHeight: 4,
-                      background: isCurrent ? 'linear-gradient(to top, #FFD600, #FFE566)' : 'rgba(255,214,0,0.35)',
+                      background: isCurrent ? 'linear-gradient(to top, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, white))' : 'color-mix(in srgb, var(--color-primary) 35%, transparent)',
                       borderRadius: '2px 2px 0 0',
                       boxShadow: isCurrent ? '0 0 8px rgba(255,214,0,0.4)' : 'none',
                     }} />
@@ -112,7 +109,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
             })}
           </div>
           {/* Tx count row */}
-          <div className="flex justify-between mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex justify-between mt-3 pt-3 panel-divider">
             {MONTHLY_DATA.map(d => (
               <div key={d.month} className="flex-1 text-center">
                 <p className="font-mono text-[10px]" style={{ color: '#FF2EBD' }}>{d.transactions}</p>
@@ -124,26 +121,26 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
 
         {/* Top cards */}
         <div className="panel-card">
-          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between px-4 py-3 panel-divider">
             <h2 className="font-display font-semibold text-sm text-foreground">{t.topCards}</h2>
             <span className="text-xs text-muted-foreground font-mono">{t.lastSixMonths}</span>
           </div>
           {TOP_CARDS.map((card, i) => {
             const maxSold = TOP_CARDS[0].sold;
             return (
-              <div key={card.name} className="flex items-start gap-2 sm:gap-3 px-4 py-3 min-w-0" style={{ borderBottom: i < TOP_CARDS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+              <div key={card.name} className={`flex items-start gap-2 sm:gap-3 px-4 py-3 min-w-0 ${i < TOP_CARDS.length - 1 ? 'panel-divider' : ''}`}>
                 <span className="font-pixel text-[9px] text-muted-foreground w-4">{i + 1}</span>
                 <span className="text-lg">{card.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-display text-xs font-semibold text-foreground truncate">{card.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1 overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 1 }}>
-                      <div className="h-full" style={{ width: `${(card.sold / maxSold) * 100}%`, background: '#FFD600', boxShadow: '0 0 4px rgba(255,214,0,0.5)' }} />
+                    <div className="flex-1 h-1 overflow-hidden bg-muted" style={{ borderRadius: 1 }}>
+                      <div className="h-full bg-primary" style={{ width: `${(card.sold / maxSold) * 100}%`, boxShadow: '0 0 4px color-mix(in srgb, var(--color-primary) 50%, transparent)' }} />
                     </div>
                     <span className="text-[10px] text-muted-foreground font-mono shrink-0">{card.sold} {lang === 'th' ? 'ชิ้น' : 'pcs'}</span>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-bold shrink-0 pt-0.5" style={{ color: '#FFD600' }}>฿{(card.revenue / 1000).toFixed(0)}K</span>
+                <span className="text-xs font-mono font-bold shrink-0 pt-0.5 text-primary">฿{(card.revenue / 1000).toFixed(0)}K</span>
               </div>
             );
           })}
@@ -151,13 +148,13 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
 
         {/* Recent sales */}
         <div className="panel-card">
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-4 py-3 panel-divider">
             <h2 className="font-display font-semibold text-sm text-foreground">{t.recentSales}</h2>
           </div>
           {RECENT_SALES.map((sale, i) => (
-            <div key={i} className="flex items-center gap-2 sm:gap-3 px-4 py-3 min-w-0" style={{ borderBottom: i < RECENT_SALES.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
-              <div className="w-9 h-9 flex items-center justify-center text-lg shrink-0"
-                style={{ background: 'rgba(255,214,0,0.08)', borderRadius: 4, border: '1px solid rgba(255,214,0,0.15)' }}>
+            <div key={i} className={`flex items-center gap-2 sm:gap-3 px-4 py-3 min-w-0 ${i < RECENT_SALES.length - 1 ? 'panel-divider' : ''}`}>
+              <div className="w-9 h-9 flex items-center justify-center text-lg shrink-0 surface-subtle"
+                style={{ borderRadius: 4 }}>
                 {sale.icon}
               </div>
               <div className="flex-1 min-w-0">
@@ -165,8 +162,8 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
                 <p className="text-[10px] text-muted-foreground">{sale.buyer} · {lang === 'th' ? sale.dateTh : sale.dateEn}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-bold font-mono" style={{ color: '#00E676' }}>+฿{sale.price.toLocaleString()}</p>
-                <p className="font-display text-[10px]" style={{ color: '#00E676', opacity: 0.7 }}>✓ {t.txSuccess}</p>
+                <p className="text-sm font-bold font-mono text-success">+฿{sale.price.toLocaleString()}</p>
+                <p className="font-display text-[10px] text-success opacity-70">✓ {t.txSuccess}</p>
               </div>
             </div>
           ))}
