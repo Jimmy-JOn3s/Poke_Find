@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import type { AppLang, Currency, User, Listing, Review } from '../types';
+import { useEffect, useState } from 'react';
+import type { AppLang, Currency, User, Listing, Review, ReviewContext } from '../types';
 import { i18n } from '../i18n';
+import { api, mapPublicProfile } from '../lib/api';
 import Price from '../components/Price';
 import CardArt from '../components/CardArt';
+import ReviewForm from '../components/ReviewForm';
 
 interface Props {
   lang: AppLang;
@@ -10,32 +12,67 @@ interface Props {
   listings: Listing[];
   displayCurrency: Currency;
   viewUserId?: string;
+  reviewContext?: ReviewContext;
   isAuthenticated: boolean;
   onSignIn: () => void;
   onSelectListing: (l: Listing) => void;
   onViewAnalytics: () => void;
+  onReviewContextClear: () => void;
 }
 
-export default function ProfilePage({ lang, currentUser, listings, displayCurrency, viewUserId, isAuthenticated, onSignIn, onSelectListing, onViewAnalytics }: Props) {
+export default function ProfilePage({
+  lang, currentUser, listings, displayCurrency, viewUserId, reviewContext,
+  isAuthenticated, onSignIn, onSelectListing, onViewAnalytics, onReviewContextClear,
+}: Props) {
   const t = i18n[lang];
   const [tab, setTab] = useState<'listings' | 'reviews'>('listings');
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [pendingDealId, setPendingDealId] = useState<number | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const sellerListing = viewUserId ? listings.find(listing => listing.sellerId === viewUserId) : undefined;
-  const profileUser = sellerListing ? {
-    id: sellerListing.sellerId,
-    name: sellerListing.sellerName,
-    email: '',
-    avatar: sellerListing.sellerAvatar,
-    role: sellerListing.sellerRole,
-    verified: sellerListing.sellerVerified,
-    rating: sellerListing.sellerRating,
-    reviewCount: 0,
-    totalSold: 0,
-    joinedDate: '',
-    location: '',
-    bio: '',
-  } satisfies User : currentUser;
+  const profileId = viewUserId || currentUser?.id;
   const isOwnProfile = !viewUserId || viewUserId === currentUser?.id;
+
+  useEffect(() => {
+    if (reviewContext && reviewContext.revieweeId === profileId) {
+      setShowReviewForm(true);
+      setTab('reviews');
+    }
+  }, [reviewContext, profileId]);
+
+  useEffect(() => {
+    if (!profileId) {
+      setProfileUser(null);
+      return;
+    }
+    if (isOwnProfile && currentUser && !viewUserId) {
+      setProfileUser(currentUser);
+    }
+    setLoading(true);
+    Promise.all([
+      api.userProfile(profileId),
+      api.userReviews(profileId),
+    ])
+      .then(([profile, nextReviews]) => {
+        const mapped = mapPublicProfile(profile);
+        setProfileUser(isOwnProfile && currentUser && !viewUserId
+          ? { ...currentUser, rating: mapped.rating, reviewCount: mapped.reviewCount, totalSold: mapped.totalSold }
+          : mapped);
+        setReviews(nextReviews);
+        setPendingDealId(profile.pending_review_deal_id);
+        if (profile.pending_review_deal_id && !reviewContext) {
+          setShowReviewForm(true);
+          setTab('reviews');
+        }
+      })
+      .catch(() => {
+        if (isOwnProfile && currentUser) setProfileUser(currentUser);
+      })
+      .finally(() => setLoading(false));
+  }, [profileId, isOwnProfile, currentUser, viewUserId, reviewContext]);
 
   if (!isAuthenticated && isOwnProfile) {
     return (
@@ -53,15 +90,29 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
   if (!profileUser) return null;
 
   const userListings = listings.filter(l => l.sellerId === profileUser.id);
-  const reviews: Review[] = [];
+  const activeDealId = reviewContext?.dealId ?? pendingDealId;
+  const canLeaveReview = !isOwnProfile && isAuthenticated && activeDealId && !reviewSubmitted && showReviewForm;
+
+  const handleReviewSubmitted = async () => {
+    setReviewSubmitted(true);
+    setShowReviewForm(false);
+    onReviewContextClear();
+    const nextReviews = await api.userReviews(profileUser.id);
+    setReviews(nextReviews);
+    const profile = await api.userProfile(profileUser.id);
+    setProfileUser(current => current ? {
+      ...current,
+      rating: profile.rating,
+      reviewCount: profile.review_count,
+    } : current);
+    setPendingDealId(null);
+  };
 
   return (
     <div className="flex flex-col min-h-full bg-background">
-      {/* Profile hero */}
       <div className="relative page-header pixel-bg profile-hero">
         <div className="absolute inset-0 profile-hero-glow" />
         <div className="relative page-container px-4 md:px-6 lg:px-8 pb-5 flex flex-col items-center text-center">
-          {/* Avatar */}
           <div className="w-18 h-18 w-[72px] h-[72px] flex items-center justify-center text-2xl font-bold mb-3 relative"
             style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 8, boxShadow: '3px 3px 0 var(--color-shadow-accent)' }}>
             {profileUser.avatar}
@@ -71,13 +122,11 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
             )}
           </div>
 
-          {/* Name + badges */}
           <div className="flex items-center gap-2 mb-1">
             <h1 className="font-display text-lg font-bold text-foreground">{profileUser.name}</h1>
             {profileUser.role === 'business' && <span className="badge-business">{t.businessBadge}</span>}
           </div>
 
-          {/* Verification */}
           <div className="flex items-center gap-3 text-xs mb-2">
             {profileUser.verified ? (
               <span className="font-display flex items-center gap-1 text-success">
@@ -86,20 +135,23 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
             ) : (
               <span className="font-display opacity-50 text-muted-foreground">○ {t.notVerified}</span>
             )}
-            <span className="text-muted-foreground">•</span>
-            <span className="text-muted-foreground">📍 {profileUser.location}</span>
+            {profileUser.location && (
+              <>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">📍 {profileUser.location}</span>
+              </>
+            )}
           </div>
 
           {profileUser.bio && (
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-4">{profileUser.bio}</p>
           )}
 
-          {/* Stats bar */}
           <div className="flex w-full max-w-sm overflow-hidden stats-bar">
             {[
               { label: t.totalSold, value: profileUser.totalSold.toLocaleString() },
-              { label: t.rating,    value: `★ ${profileUser.rating}` },
-              { label: t.reviews,   value: profileUser.reviewCount.toString() },
+              { label: t.rating, value: profileUser.reviewCount > 0 ? `★ ${profileUser.rating}` : '—' },
+              { label: t.reviews, value: profileUser.reviewCount.toString() },
             ].map((stat, i) => (
               <div key={stat.label} className={`flex-1 py-3 text-center ${i < 2 ? 'stats-bar-divider' : ''}`}>
                 <p className="font-mono font-bold text-base text-primary">{stat.value}</p>
@@ -110,7 +162,6 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
         </div>
       </div>
 
-      {/* Business analytics button */}
       {isOwnProfile && profileUser.role === 'business' && (
         <div className="page-container px-4 md:px-6 lg:px-8 pt-3">
           <button onClick={onViewAnalytics}
@@ -128,7 +179,6 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
         </div>
       )}
 
-      {/* Tabs */}
       <div className="page-container flex px-4 md:px-6 lg:px-8 pt-3 gap-2 max-w-2xl">
         {(['listings', 'reviews'] as const).map(tabId => (
           <button key={tabId} onClick={() => setTab(tabId)}
@@ -138,8 +188,11 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto scroll-end-buffer px-4 md:px-6 lg:px-8 pt-3">
+        {loading && tab === 'reviews' && (
+          <p className="text-sm text-muted-foreground text-center py-6">{t.loading}</p>
+        )}
+
         {tab === 'listings' && (
           <div className="page-container grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-3 lg:gap-4">
             {userListings.length === 0 ? (
@@ -184,8 +237,20 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
         )}
 
         {tab === 'reviews' && (
-          <div className="flex flex-col gap-3">
-            {reviews.length === 0 ? (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            {canLeaveReview && activeDealId && (
+              <ReviewForm
+                lang={lang}
+                dealId={activeDealId}
+                revieweeName={profileUser.name}
+                onSubmitted={() => void handleReviewSubmitted()}
+                onCancel={() => { setShowReviewForm(false); onReviewContextClear(); }}
+              />
+            )}
+            {reviewSubmitted && (
+              <p className="text-sm text-success text-center py-2">{t.reviewSubmitted}</p>
+            )}
+            {reviews.length === 0 && !canLeaveReview ? (
               <div className="py-12 text-center">
                 <p className="font-display text-sm text-muted-foreground">{t.noReviews}</p>
               </div>
@@ -210,9 +275,14 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
                         </div>
                         <span className="text-[10px] text-muted-foreground font-mono">{review.date}</span>
                       </div>
+                      {review.listingName && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{review.listingName}</p>
+                      )}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
+                  {review.comment && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
+                  )}
                 </div>
               ))
             )}

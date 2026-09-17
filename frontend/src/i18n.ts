@@ -53,8 +53,14 @@ const th = {
   // Profile
   totalSold: 'ยอดขาย', rating: 'คะแนน', reviews: 'รีวิว', activeListings: 'รายการ',
   verified: 'ยืนยันแล้ว', notVerified: 'ยังไม่ยืนยัน', businessBadge: 'BIZ',
-  joinedOn: 'สมาชิกตั้งแต่', noReviews: 'ยังไม่มีรีวิว', noListings: 'ยังไม่มีรายการ',
+  joinedOn: 'สมาชิกตั้งแต่',   noReviews: 'ยังไม่มีรีวิว', noListings: 'ยังไม่มีรายการ',
   verifyToSell: 'ยืนยันตัวตนเพื่อขายได้',
+  leaveReview: 'เขียนรีวิว', reviewPromptTitle: 'การซื้อขายสำเร็จ!',
+  reviewPromptBody: 'ช่วยให้คะแนนและรีวิวเพื่อสร้างความน่าเชื่อถือให้ชุมชน',
+  reviewFor: 'รีวิว', reviewComment: 'ความคิดเห็น (ไม่บังคับ)',
+  reviewPlaceholder: 'เล่าประสบการณ์การซื้อขายของคุณ...',
+  reviewSubmitted: 'ส่งรีวิวแล้ว ขอบคุณ!', reviewLater: 'ไว้ทีหลัง',
+  reviewBanner: 'ทิ้งรีวิวให้', yourRating: 'คะแนนของคุณ',
 
   // Settings
   settingsTitle: 'ตั้งค่า', notifications: 'การแจ้งเตือน', pushNotifications: 'การแจ้งเตือนแบบพุช',
@@ -137,8 +143,14 @@ const en: typeof th = {
 
   totalSold: 'Sold', rating: 'Rating', reviews: 'Reviews', activeListings: 'Listings',
   verified: 'Verified', notVerified: 'Not Verified', businessBadge: 'BIZ',
-  joinedOn: 'Member since', noReviews: 'No reviews yet', noListings: 'No listings yet',
+  joinedOn: 'Member since',   noReviews: 'No reviews yet', noListings: 'No listings yet',
   verifyToSell: 'Verify to start selling',
+  leaveReview: 'Leave a Review', reviewPromptTitle: 'Transaction Complete!',
+  reviewPromptBody: 'Rate your trading partner to help build trust in the community.',
+  reviewFor: 'Review', reviewComment: 'Comment (optional)',
+  reviewPlaceholder: 'Share your trading experience...',
+  reviewSubmitted: 'Review submitted. Thank you!', reviewLater: 'Maybe later',
+  reviewBanner: 'Leave a review for', yourRating: 'Your rating',
 
   settingsTitle: 'Settings', notifications: 'Notifications', pushNotifications: 'Push Notifications',
   pushNotifSub: 'Trade activity and messages',

@@ -2,9 +2,10 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from marketplace.models import Listing, SavedListing
-from messaging.models import Conversation, Message, Offer
+from messaging.models import Conversation, Deal, Message, Offer, Review
 
 
 User = get_user_model()
@@ -376,4 +377,133 @@ class Command(BaseCommand):
             conversation=conversation, proposer=buyer, amount=Decimal("4800.00"), currency="THB",
             defaults={"status": "pending"},
         )
-        self.stdout.write(self.style.SUCCESS(f"PokeFind demo data is ready ({len(listings)} listings)"))
+
+        trader_one, _ = User.objects.update_or_create(
+            username="demo-trader1",
+            defaults={
+                "email": "trader1@pokefind.local", "display_name": "Card Hunter TH",
+                "role": "personal", "preferred_language": "th", "preferred_currency": "THB",
+                "location": "Bangkok",
+            },
+        )
+        trader_one.set_password("PokeFind123!")
+        trader_one.save()
+        trader_two, _ = User.objects.update_or_create(
+            username="demo-trader2",
+            defaults={
+                "email": "trader2@pokefind.local", "display_name": "TCG Explorer",
+                "role": "personal", "preferred_language": "en", "preferred_currency": "USD",
+                "location": "Phuket",
+            },
+        )
+        trader_two.set_password("PokeFind123!")
+        trader_two.save()
+
+        review_count = self._seed_reviews(seller, buyer, trader_one, trader_two, listings)
+        self.stdout.write(self.style.SUCCESS(
+            f"PokeFind demo data is ready ({len(listings)} listings, {review_count} reviews)",
+        ))
+
+    def _seed_completed_trade(self, listing, trade_buyer, final_price, currency):
+        listing.status = Listing.Status.SOLD
+        listing.save(update_fields=("status",))
+        conversation, _ = Conversation.objects.get_or_create(
+            listing=listing, buyer=trade_buyer, seller=listing.seller,
+        )
+        offer, _ = Offer.objects.update_or_create(
+            conversation=conversation,
+            proposer=trade_buyer,
+            amount=final_price,
+            currency=currency,
+            defaults={"status": Offer.Status.ACCEPTED},
+        )
+        if offer.status != Offer.Status.ACCEPTED:
+            offer.status = Offer.Status.ACCEPTED
+            offer.save(update_fields=("status", "updated_at"))
+        deal, _ = Deal.objects.update_or_create(
+            conversation=conversation,
+            defaults={
+                "accepted_offer": offer,
+                "final_price": final_price,
+                "currency": currency,
+                "status": Deal.Status.COMPLETED,
+                "buyer_confirmed": True,
+                "seller_confirmed": True,
+                "completed_at": timezone.now(),
+            },
+        )
+        if deal.status != Deal.Status.COMPLETED:
+            deal.status = Deal.Status.COMPLETED
+            deal.buyer_confirmed = True
+            deal.seller_confirmed = True
+            deal.completed_at = timezone.now()
+            deal.save(update_fields=("status", "buyer_confirmed", "seller_confirmed", "completed_at"))
+        return deal
+
+    def _seed_review(self, deal, reviewer, reviewee, rating, comment):
+        Review.objects.update_or_create(
+            deal=deal,
+            reviewer=reviewer,
+            defaults={"reviewee": reviewee, "rating": rating, "comment": comment},
+        )
+
+    def _seed_reviews(self, seller, buyer, trader_one, trader_two, listings):
+        trades = [
+            {
+                "listing": listings[1],
+                "buyer": trader_one,
+                "final_price": Decimal("850.00"),
+                "currency": "THB",
+                "reviews": [
+                    (trader_one, seller, 5, "ส่งเร็วมาก การ์ดตรงตามที่โฆษณา แนะนำร้านนี้เลย"),
+                    (seller, trader_one, 5, "ลูกค้าดี โอนเงินตรงเวลา ขอบคุณครับ"),
+                ],
+            },
+            {
+                "listing": listings[2],
+                "buyer": trader_two,
+                "final_price": Decimal("1400.00"),
+                "currency": "THB",
+                "reviews": [
+                    (trader_two, seller, 4, "Smooth transaction. Card arrived well protected."),
+                    (seller, trader_two, 5, "Great buyer, easy to deal with."),
+                ],
+            },
+            {
+                "listing": listings[3],
+                "buyer": buyer,
+                "final_price": Decimal("26.00"),
+                "currency": "THB",
+                "reviews": [
+                    (buyer, seller, 5, "Perfect for my Thai collection. Fast meetup in Bangkok."),
+                    (seller, buyer, 4, "Pleasant buyer, would trade again."),
+                ],
+            },
+            {
+                "listing": listings[14],
+                "buyer": trader_two,
+                "final_price": Decimal("40.00"),
+                "currency": "USD",
+                "reviews": [
+                    (trader_two, seller, 5, "Japanese Pikachu AR was mint. Shipped internationally without issues."),
+                ],
+            },
+            {
+                "listing": listings[15],
+                "buyer": trader_one,
+                "final_price": Decimal("175.00"),
+                "currency": "USD",
+                "reviews": [
+                    (trader_one, seller, 5, "Mew ex SAR สวยมาก แพ็คดีมาก จะซื้ออีกแน่นอน"),
+                ],
+            },
+        ]
+        review_count = 0
+        for trade in trades:
+            deal = self._seed_completed_trade(
+                trade["listing"], trade["buyer"], trade["final_price"], trade["currency"],
+            )
+            for reviewer, reviewee, rating, comment in trade["reviews"]:
+                self._seed_review(deal, reviewer, reviewee, rating, comment)
+                review_count += 1
+        return review_count

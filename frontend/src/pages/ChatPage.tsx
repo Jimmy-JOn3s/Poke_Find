@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { AppLang, User } from "../types";
-import { api, type ApiConversation, type ApiMessage, type ApiOffer } from "../lib/api";
+import type { AppLang, ReviewContext, User } from "../types";
+import { api, type ApiConversation, type ApiDeal, type ApiMessage, type ApiOffer } from "../lib/api";
 import { formatMoney } from "../lib/money";
+import ReviewPromptModal from "../components/ReviewPromptModal";
 
 
 interface Props {
@@ -9,18 +10,21 @@ interface Props {
   currentUser: User | null;
   isAuthenticated: boolean;
   onSignIn: () => void;
+  onLeaveReview: (context: ReviewContext) => void;
 }
 
 
-export default function ChatPage({ lang, currentUser, isAuthenticated, onSignIn }: Props) {
+export default function ChatPage({ lang, currentUser, isAuthenticated, onSignIn, onLeaveReview }: Props) {
   const copy = lang === "th" ? {
     title: "ข้อความ", empty: "ยังไม่มีการสนทนา", signIn: "เข้าสู่ระบบเพื่อดูข้อความ",
     type: "พิมพ์ข้อความ...", send: "ส่ง", offer: "เสนอราคา", accept: "ยอมรับ",
     decline: "ปฏิเสธ", complete: "ยืนยันว่าซื้อขายสำเร็จ", retry: "ลองอีกครั้ง",
+    reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
     type: "Type a message...", send: "Send", offer: "Make offer", accept: "Accept",
     decline: "Decline", complete: "Confirm completed trade", retry: "Try again",
+    reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const [threads, setThreads] = useState<ApiConversation[]>([]);
   const [active, setActive] = useState<ApiConversation | null>(null);
@@ -30,6 +34,27 @@ export default function ChatPage({ lang, currentUser, isAuthenticated, onSignIn 
   const [offerAmount, setOfferAmount] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
+
+  const maybePromptReview = (deal: ApiDeal) => {
+    if (deal.status !== "completed" || deal.reviewer_has_reviewed === true || !deal.counterparty_id) return;
+    setReviewPrompt({
+      dealId: deal.id,
+      revieweeId: String(deal.counterparty_id),
+      revieweeName: deal.counterparty_name || "",
+    });
+  };
+
+  const confirmCompletion = async () => {
+    if (!active?.deal) return;
+    try {
+      const deal = await api.confirmDeal(active.deal.id);
+      await loadThreads();
+      maybePromptReview(deal);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Request failed");
+    }
+  };
 
   const loadThreads = async () => {
     if (!isAuthenticated) return;
@@ -164,14 +189,38 @@ export default function ChatPage({ lang, currentUser, isAuthenticated, onSignIn 
               <button onClick={() => void sendMessage()} className="btn-primary px-3 text-xs shrink-0">{copy.send}</button>
             </div>
             {active.deal && active.deal.status !== "completed" && (
-              <button onClick={async () => { await api.confirmDeal(active.deal!.id); await loadThreads(); }}
+              <button onClick={() => void confirmCompletion()}
                 className="w-full py-2 text-xs text-success"
                 style={{ border: "1px solid color-mix(in srgb, var(--color-success) 40%, transparent)" }}>
                 {copy.complete}
               </button>
             )}
+            {active.deal && active.deal.status === "completed" && active.deal.reviewer_has_reviewed !== true && active.deal.counterparty_id && (
+              <button
+                onClick={() => onLeaveReview({
+                  dealId: active.deal!.id,
+                  revieweeId: String(active.deal!.counterparty_id),
+                  revieweeName: active.deal!.counterparty_name || threadLabel(active),
+                })}
+                className="w-full py-2 text-xs text-primary"
+                style={{ border: "1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)" }}>
+                {copy.reviewBanner} {active.deal.counterparty_name || threadLabel(active)} · {copy.leaveReview}
+              </button>
+            )}
           </div>
         </div>
+      )}
+
+      {reviewPrompt && (
+        <ReviewPromptModal
+          lang={lang}
+          revieweeName={reviewPrompt.revieweeName}
+          onLeaveReview={() => {
+            onLeaveReview(reviewPrompt);
+            setReviewPrompt(null);
+          }}
+          onDismiss={() => setReviewPrompt(null)}
+        />
       )}
     </div>
   );
