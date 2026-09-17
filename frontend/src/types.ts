@@ -54,6 +54,7 @@ export interface Listing {
   views: number;
   likes: number;
   description?: string;
+  imageUrl?: string;
   photo?: string;
   isSaved?: boolean;
 }

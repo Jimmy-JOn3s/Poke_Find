@@ -18,12 +18,14 @@ describe("listing API adapter", () => {
       currency: "THB",
       quantity: 1,
       description: "Thai print",
+      image_url: "https://assets.tcgdex.net/ja/SV/SV2a/205/high.webp",
       status: "active",
       created_at: "2026-09-13T10:00:00Z",
       is_saved: false,
       photo: null,
     });
     expect(listing.productName).toBe("Mew ex");
+    expect(listing.imageUrl).toContain("tcgdex.net");
     expect(listing.sellerRole).toBe("business");
     expect(listing.currency).toBe("THB");
     expect(listing.listedPrice).toBe(2100);

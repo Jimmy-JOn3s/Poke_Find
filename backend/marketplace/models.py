@@ -46,6 +46,7 @@ class Listing(models.Model):
     currency = models.CharField(max_length=3, choices=Currency.choices)
     quantity = models.PositiveIntegerField(default=1)
     description = models.TextField(blank=True)
+    image_url = models.URLField(blank=True, max_length=500)
     photo = models.ImageField(upload_to="listings/", blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
