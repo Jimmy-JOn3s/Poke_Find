@@ -147,7 +147,7 @@ export default function ProfilePage({ lang, currentUser, listings, displayCurren
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 pt-3 pb-4 bottom-safe">
+      <div className="flex-1 overflow-y-auto scroll-end-buffer px-4 md:px-6 lg:px-8 pt-3">
         {tab === 'listings' && (
           <div className="page-container grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-3 lg:gap-4">
             {userListings.length === 0 ? (

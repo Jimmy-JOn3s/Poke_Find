@@ -129,7 +129,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto px-3 md:px-6 lg:px-8 bottom-safe">
+      <div className="flex-1 overflow-y-auto scroll-end-buffer px-3 md:px-6 lg:px-8">
         {loading && <p className="text-center text-sm text-muted-foreground py-8">{t.loading}</p>}
         {error && (
           <div className="text-center py-8">

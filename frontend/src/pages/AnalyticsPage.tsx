@@ -55,10 +55,10 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
   const myListings = MOCK_LISTINGS.filter(l => l.sellerId === 'me');
 
   return (
-    <div className="flex flex-col min-h-full bg-background pixel-bg">
+    <div className="page-shell bg-background pixel-bg">
       {/* Header */}
       <div className="page-container flex items-center gap-3 px-4 md:px-6 lg:px-8 page-header pb-4 shrink-0"
-        style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
+        style={{ background: 'rgba(6,7,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,214,0,0.1)' }}>
         <button onClick={onBack}
           className="w-8 h-8 flex items-center justify-center font-display text-muted-foreground"
           style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, background: 'rgba(255,255,255,0.05)' }}>←</button>
@@ -68,7 +68,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 bottom-safe flex flex-col gap-4 page-container max-w-5xl">
+      <div className="page-scroll scroll-end-buffer px-4 md:px-6 lg:px-8 py-4 space-y-4 page-container max-w-5xl w-full">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
           {[
@@ -123,7 +123,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
         </div>
 
         {/* Top cards */}
-        <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
+        <div className="panel-card">
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <h2 className="font-display font-semibold text-sm text-foreground">{t.topCards}</h2>
             <span className="text-xs text-muted-foreground font-mono">{t.lastSixMonths}</span>
@@ -131,7 +131,7 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
           {TOP_CARDS.map((card, i) => {
             const maxSold = TOP_CARDS[0].sold;
             return (
-              <div key={card.name} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < TOP_CARDS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+              <div key={card.name} className="flex items-start gap-2 sm:gap-3 px-4 py-3 min-w-0" style={{ borderBottom: i < TOP_CARDS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
                 <span className="font-pixel text-[9px] text-muted-foreground w-4">{i + 1}</span>
                 <span className="text-lg">{card.icon}</span>
                 <div className="flex-1 min-w-0">
@@ -143,19 +143,19 @@ export default function AnalyticsPage({ lang, currentUser, onBack }: Props) {
                     <span className="text-[10px] text-muted-foreground font-mono shrink-0">{card.sold} {lang === 'th' ? 'ชิ้น' : 'pcs'}</span>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-bold shrink-0" style={{ color: '#FFD600' }}>฿{(card.revenue / 1000).toFixed(0)}K</span>
+                <span className="text-xs font-mono font-bold shrink-0 pt-0.5" style={{ color: '#FFD600' }}>฿{(card.revenue / 1000).toFixed(0)}K</span>
               </div>
             );
           })}
         </div>
 
         {/* Recent sales */}
-        <div style={{ background: '#0C0E28', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
+        <div className="panel-card">
           <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <h2 className="font-display font-semibold text-sm text-foreground">{t.recentSales}</h2>
           </div>
           {RECENT_SALES.map((sale, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < RECENT_SALES.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+            <div key={i} className="flex items-center gap-2 sm:gap-3 px-4 py-3 min-w-0" style={{ borderBottom: i < RECENT_SALES.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
               <div className="w-9 h-9 flex items-center justify-center text-lg shrink-0"
                 style={{ background: 'rgba(255,214,0,0.08)', borderRadius: 4, border: '1px solid rgba(255,214,0,0.15)' }}>
                 {sale.icon}

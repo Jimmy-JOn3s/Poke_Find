@@ -179,7 +179,7 @@ export default function App() {
         style={{ background: "#3a0b19", border: "1px solid #FF3D57", color: "#fff", borderRadius: 4 }}>{actionError} · ✕</button>}
       {showNav && <Navigation current={currentPage} onNav={handleNav} isAuthenticated={isAuthenticated} lang={lang} unreadChats={0} />}
       <main className={`flex-1 overflow-hidden flex flex-col min-w-0 ${showNav ? "bottom-safe md:bottom-0 md:pl-56" : ""}`}>
-        <div className="flex-1 overflow-hidden flex flex-col h-full">{renderPage()}</div>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>
       </main>
       {showCreateListing && <CreateListingModal lang={lang} onClose={() => { setShowCreateListing(false); setEditListing(undefined); }}
         onSubmit={data => void handleCreateListing(data)} editListing={editListing} sellerRole={currentUser?.role || "personal"} />}
