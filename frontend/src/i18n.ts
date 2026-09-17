@@ -62,7 +62,8 @@ const th = {
   emailNotifications: 'การแจ้งเตือนทางอีเมล', emailNotifSub: 'รับอีเมลสรุปรายสัปดาห์',
   chatNotifications: 'แจ้งเตือนแชทใหม่', chatNotifSub: 'เมื่อมีข้อความหรือข้อเสนอ',
   priceAlerts: 'แจ้งเตือนราคา', priceAlertsSub: 'เมื่อการ์ดที่บันทึกไว้ลดราคา',
-  appLanguage: 'ภาษาแอป', signOut: 'ออกจากระบบ',
+  appLanguage: 'ภาษาแอป', appearance: 'รูปลักษณ์', lightMode: 'สว่าง', darkMode: 'มืด', systemTheme: 'ระบบ',
+  signOut: 'ออกจากระบบ',
   account: 'บัญชีของฉัน', security: 'ความปลอดภัย', help: 'ช่วยเหลือ',
   privacy: 'นโยบายความเป็นส่วนตัว', terms: 'ข้อกำหนดการใช้งาน', version: 'เวอร์ชัน',
 
@@ -144,7 +145,8 @@ const en: typeof th = {
   emailNotifications: 'Email Notifications', emailNotifSub: 'Weekly summary emails',
   chatNotifications: 'Chat Notifications', chatNotifSub: 'New messages and offers',
   priceAlerts: 'Price Alerts', priceAlertsSub: 'When saved cards drop in price',
-  appLanguage: 'App Language', signOut: 'Sign Out',
+  appLanguage: 'App Language', appearance: 'Appearance', lightMode: 'Light', darkMode: 'Dark', systemTheme: 'System',
+  signOut: 'Sign Out',
   account: 'My Account', security: 'Security', help: 'Help & Support',
   privacy: 'Privacy Policy', terms: 'Terms of Service', version: 'Version',
 

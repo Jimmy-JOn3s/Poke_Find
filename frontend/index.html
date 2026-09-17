@@ -2,6 +2,15 @@
 <html lang="<!-- figma:lang -->">
   <head>
     <!-- figma:head-start -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem("pokefind.theme");
+        var pref = stored === "light" || stored === "dark" || stored === "system" ? stored : "dark";
+        var dark = pref === "dark" || (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><!-- figma:title --></title>
