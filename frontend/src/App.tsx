@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AppLang, Currency, Listing, Page, ThemePreference, User, UserRole } from "./types";
+import type { AppLang, Currency, Listing, Page, ReviewContext, ThemePreference, User, UserRole } from "./types";
 import { applyTheme, storedTheme, THEME_STORAGE_KEY } from "./lib/theme";
 import Navigation from "./components/Navigation";
 import CreateListingModal from "./components/CreateListingModal";
@@ -27,6 +27,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [viewUserId, setViewUserId] = useState<string | undefined>();
+  const [reviewContext, setReviewContext] = useState<ReviewContext | undefined>();
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [editListing, setEditListing] = useState<Listing | undefined>();
   const [authError, setAuthError] = useState("");
@@ -111,7 +112,14 @@ export default function App() {
   const handleNav = (page: Page) => {
     setSelectedListing(null);
     setViewUserId(undefined);
+    setReviewContext(undefined);
     setCurrentPage(page);
+  };
+
+  const handleLeaveReview = (context: ReviewContext) => {
+    setReviewContext(context);
+    setViewUserId(context.revieweeId);
+    setCurrentPage("profile");
   };
 
   const handleCreateListing = async (data: Partial<Listing>) => {
@@ -171,13 +179,15 @@ export default function App() {
           onEditListing={listing => { setEditListing(listing); setShowCreateListing(true); }}
           onDeleteListing={id => void handleDeleteListing(id)} />;
       case "chat":
-        return <ChatPage lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated} onSignIn={() => setCurrentPage("auth")} />;
+        return <ChatPage lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated}
+          onSignIn={() => setCurrentPage("auth")} onLeaveReview={handleLeaveReview} />;
       case "profile":
         return <ProfilePage lang={lang} currentUser={currentUser} viewUserId={viewUserId}
-          listings={listings} displayCurrency={currency}
+          reviewContext={reviewContext} listings={listings} displayCurrency={currency}
           isAuthenticated={isAuthenticated} onSignIn={() => setCurrentPage("auth")}
           onSelectListing={listing => { setSelectedListing(listing); setCurrentPage("listing"); }}
-          onViewAnalytics={() => setCurrentPage("analytics")} />;
+          onViewAnalytics={() => setCurrentPage("analytics")}
+          onReviewContextClear={() => setReviewContext(undefined)} />;
       case "settings":
         return <SettingsPage lang={lang} onLangChange={setLang} currency={currency} onCurrencyChange={setCurrency}
           theme={theme} onThemeChange={setTheme}

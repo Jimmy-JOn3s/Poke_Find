@@ -8,8 +8,11 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from .models import Conversation, Deal, Offer
-from .serializers import ConversationSerializer, DealSerializer, MessageSerializer, OfferSerializer
-from .services import confirm_deal, transition_offer
+from .serializers import (
+    ConversationSerializer, DealSerializer, MessageSerializer, OfferSerializer,
+    ReviewCreateSerializer, ReviewSerializer,
+)
+from .services import confirm_deal, create_review, transition_offer
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -18,7 +21,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "post", "head", "options")
 
     def get_queryset(self):
-        return Conversation.objects.select_related("listing", "buyer", "seller").filter(
+        return Conversation.objects.select_related(
+            "listing", "buyer", "seller", "deal__conversation__buyer", "deal__conversation__seller",
+        ).prefetch_related("deal__reviews").filter(
             Q(buyer=self.request.user) | Q(seller=self.request.user)
         )
 
@@ -83,7 +88,9 @@ class DealViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        return Deal.objects.select_related("conversation").filter(
+        return Deal.objects.select_related(
+            "conversation__buyer", "conversation__seller",
+        ).prefetch_related("reviews").filter(
             Q(conversation__buyer=self.request.user) | Q(conversation__seller=self.request.user)
         )
 
@@ -93,5 +100,29 @@ class DealViewSet(viewsets.ReadOnlyModelViewSet):
             deal = confirm_deal(self.get_object(), request.user)
         except DjangoPermissionDenied as exc:
             raise PermissionDenied(str(exc)) from exc
-        return Response(DealSerializer(deal).data)
+        return Response(DealSerializer(deal, context={"request": request}).data)
+
+    @action(detail=True, methods=("post",), url_path="review")
+    def review(self, request, pk=None):
+        serializer = ReviewCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        deal = self.get_object()
+        try:
+            created = create_review(
+                deal,
+                request.user,
+                serializer.validated_data["rating"],
+                serializer.validated_data.get("comment", ""),
+            )
+        except DjangoPermissionDenied as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+        review = deal.reviews.select_related(
+            "reviewer", "reviewee", "deal__conversation__listing",
+        ).get(pk=created.pk)
+        return Response(
+            ReviewSerializer(review, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 

@@ -1,4 +1,4 @@
-import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, UserRole } from "../types";
+import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review, UserRole } from "../types";
 
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
@@ -47,7 +47,43 @@ export interface AuthResponse {
 
 export interface ApiMessage { id: number; author: ApiUser; body: string; created_at: string }
 export interface ApiOffer { id: number; proposer: ApiUser; amount: string; currency: Currency; status: "pending" | "accepted" | "declined" | "countered"; created_at: string }
-export interface ApiDeal { id: number; status: "accepted" | "completed" | "cancelled"; final_price: string; currency: Currency; buyer_confirmed: boolean; seller_confirmed: boolean }
+export interface ApiDeal {
+  id: number;
+  status: "accepted" | "completed" | "cancelled";
+  final_price: string;
+  currency: Currency;
+  buyer_confirmed: boolean;
+  seller_confirmed: boolean;
+  reviewer_has_reviewed: boolean;
+  counterparty_id: number | null;
+  counterparty_name: string | null;
+}
+
+export interface ApiPublicProfile {
+  id: number;
+  display_name: string;
+  role: UserRole;
+  avatar?: string | null;
+  location?: string;
+  bio?: string;
+  is_verified_seller: boolean;
+  date_joined: string;
+  rating: number;
+  review_count: number;
+  total_sold: number;
+  pending_review_deal_id: number | null;
+}
+
+export interface ApiReview {
+  id: number;
+  deal: number;
+  reviewer: ApiUser;
+  reviewee: ApiUser;
+  rating: number;
+  comment: string;
+  listing_name: string;
+  created_at: string;
+}
 export interface ApiConversation {
   id: number;
   listing: { id: number; product_name: string; asking_price: string; currency: Currency };
@@ -98,6 +134,23 @@ export function mapUser(item: ApiUser) {
     role: item.role, verified: item.is_verified_seller, rating: 5, reviewCount: 0, totalSold: 0,
     joinedDate: new Date().toISOString().slice(0, 10), location: item.location || "", bio: item.bio || "",
     preferredLanguage: item.preferred_language, preferredCurrency: item.preferred_currency,
+  };
+}
+
+export function mapPublicProfile(item: ApiPublicProfile) {
+  return {
+    id: String(item.id), name: item.display_name, email: "", avatar: item.display_name.slice(0, 1),
+    role: item.role, verified: item.is_verified_seller, rating: item.rating, reviewCount: item.review_count,
+    totalSold: item.total_sold, joinedDate: item.date_joined.slice(0, 10), location: item.location || "",
+    bio: item.bio || "",
+  };
+}
+
+export function mapReview(item: ApiReview): Review {
+  return {
+    id: String(item.id), reviewerId: String(item.reviewer.id), reviewerName: item.reviewer.display_name,
+    reviewerAvatar: item.reviewer.display_name.slice(0, 1), reviewerRole: item.reviewer.role,
+    rating: item.rating, comment: item.comment, date: item.created_at.slice(0, 10), listingName: item.listing_name,
   };
 }
 
@@ -173,4 +226,14 @@ export const api = {
     return request(`/offers/${id}/counter/`, { method: "POST", body: JSON.stringify({ amount }) });
   },
   confirmDeal(id: number): Promise<ApiDeal> { return request(`/deals/${id}/confirm-completion/`, { method: "POST" }); },
+  submitReview(dealId: number, rating: number, comment: string): Promise<ApiReview> {
+    return request(`/deals/${dealId}/review/`, { method: "POST", body: JSON.stringify({ rating, comment }) });
+  },
+  async userProfile(userId: string): Promise<ApiPublicProfile> {
+    return request(`/auth/users/${userId}/`);
+  },
+  async userReviews(userId: string): Promise<Review[]> {
+    const result = await request<{ results: ApiReview[] }>(`/auth/users/${userId}/reviews/`);
+    return result.results.map(mapReview);
+  },
 };

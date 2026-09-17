@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from marketplace.models import Listing
-from .models import Deal, Offer
+from .models import Deal, Offer, Review
 
 
 @transaction.atomic
@@ -58,4 +58,29 @@ def confirm_deal(deal: Deal, actor) -> Deal:
         Listing.objects.filter(pk=deal.conversation.listing_id).update(status=Listing.Status.SOLD)
     deal.save(update_fields=fields)
     return deal
+
+
+@transaction.atomic
+def create_review(deal: Deal, reviewer, rating: int, comment: str = "") -> Review:
+    deal = Deal.objects.select_for_update().select_related("conversation").get(pk=deal.pk)
+    conversation = deal.conversation
+    if not conversation.has_participant(reviewer):
+        raise PermissionDenied("Only deal participants may leave a review")
+    if deal.status != Deal.Status.COMPLETED:
+        raise ValidationError("Reviews are only allowed after a completed deal")
+    if reviewer.id == conversation.buyer_id:
+        reviewee_id = conversation.seller_id
+    elif reviewer.id == conversation.seller_id:
+        reviewee_id = conversation.buyer_id
+    else:
+        raise PermissionDenied("Only deal participants may leave a review")
+    if Review.objects.filter(deal=deal, reviewer=reviewer).exists():
+        raise ValidationError("You have already reviewed this transaction")
+    return Review.objects.create(
+        deal=deal,
+        reviewer=reviewer,
+        reviewee_id=reviewee_id,
+        rating=rating,
+        comment=comment.strip(),
+    )
 

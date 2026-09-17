@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from accounts.serializers import UserSerializer
 from marketplace.models import Listing
-from .models import Conversation, Deal, Message, Offer
+from .models import Conversation, Deal, Message, Offer, Review
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -29,14 +29,70 @@ class OfferSerializer(serializers.ModelSerializer):
         return value
 
 
+class ReviewSerializer(serializers.ModelSerializer):
+    reviewer = UserSerializer(read_only=True)
+    reviewee = UserSerializer(read_only=True)
+    listing_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = ("id", "deal", "reviewer", "reviewee", "rating", "comment", "listing_name", "created_at")
+        read_only_fields = ("id", "reviewer", "reviewee", "listing_name", "created_at")
+
+    def get_listing_name(self, obj):
+        return obj.deal.conversation.listing.product_name
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    comment = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+
+
 class DealSerializer(serializers.ModelSerializer):
+    reviewer_has_reviewed = serializers.SerializerMethodField()
+    counterparty_id = serializers.SerializerMethodField()
+    counterparty_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Deal
         fields = (
             "id", "conversation", "accepted_offer", "final_price", "currency", "status",
             "buyer_confirmed", "seller_confirmed", "completed_at", "created_at",
+            "reviewer_has_reviewed", "counterparty_id", "counterparty_name",
         )
         read_only_fields = fields
+
+    def _request_user(self):
+        request = self.context.get("request")
+        return getattr(request, "user", None) if request else None
+
+    def get_reviewer_has_reviewed(self, obj):
+        user = self._request_user()
+        if not user or not user.is_authenticated:
+            return False
+        return obj.reviews.filter(reviewer_id=user.id).exists()
+
+    def get_counterparty_id(self, obj):
+        user = self._request_user()
+        if not user or not user.is_authenticated:
+            return None
+        conversation = obj.conversation
+        if user.id == conversation.buyer_id:
+            return conversation.seller_id
+        if user.id == conversation.seller_id:
+            return conversation.buyer_id
+        return None
+
+    def get_counterparty_name(self, obj):
+        user = self._request_user()
+        if not user or not user.is_authenticated:
+            return None
+        conversation = obj.conversation
+        if user.id == conversation.buyer_id:
+            return conversation.seller.display_name
+        if user.id == conversation.seller_id:
+            return conversation.buyer.display_name
+        return None
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -45,12 +101,18 @@ class ConversationSerializer(serializers.ModelSerializer):
     listing_id = serializers.PrimaryKeyRelatedField(source="listing", queryset=Listing.objects.filter(status=Listing.Status.ACTIVE), write_only=True)
     listing = serializers.SerializerMethodField()
     latest_message = serializers.SerializerMethodField()
-    deal = DealSerializer(read_only=True)
+    deal = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = ("id", "listing_id", "listing", "buyer", "seller", "latest_message", "deal", "created_at", "updated_at")
         read_only_fields = ("id", "buyer", "seller", "created_at", "updated_at")
+
+    def get_deal(self, obj):
+        try:
+            return DealSerializer(obj.deal, context=self.context).data
+        except Deal.DoesNotExist:
+            return None
 
     def get_listing(self, obj):
         return {"id": obj.listing_id, "product_name": obj.listing.product_name, "asking_price": str(obj.listing.asking_price), "currency": obj.listing.currency}

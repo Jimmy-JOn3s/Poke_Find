@@ -99,6 +99,13 @@ export interface Review {
   rating: number;
   comment: string;
   date: string;
+  listingName?: string;
+}
+
+export interface ReviewContext {
+  dealId: number;
+  revieweeId: string;
+  revieweeName: string;
 }
 
 export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics';
