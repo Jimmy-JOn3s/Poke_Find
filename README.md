@@ -88,6 +88,7 @@ Running `seed_demo` creates both accounts below. Their shared password is
 | Role | Email |
 | --- | --- |
 | Buyer | `buyer@pokefind.local` |
+| Buyer 2 | `buyer2@pokefind.local` |
 | Business seller | `seller@pokefind.local` |
 
 The seed command is safe to run again and also creates sample listings, a
