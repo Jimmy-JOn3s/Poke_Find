@@ -25,6 +25,7 @@ export default function App() {
   const [theme, setThemeState] = useState<ThemePreference>(() => storedTheme());
   const [currentPage, setCurrentPage] = useState<Page>("discover");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [viewUserId, setViewUserId] = useState<string | undefined>();
   const [reviewContext, setReviewContext] = useState<ReviewContext | undefined>();
@@ -110,6 +111,7 @@ export default function App() {
   };
 
   const handleNav = (page: Page) => {
+    setConversationId(null);
     setSelectedListing(null);
     setViewUserId(undefined);
     setReviewContext(undefined);
@@ -160,7 +162,8 @@ export default function App() {
       return;
     }
     try {
-      await api.startConversation(listing.id);
+      const conversation = await api.startConversation(listing.id);
+      setConversationId(conversation.id);
       setCurrentPage("chat");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "Could not start conversation");
@@ -179,7 +182,7 @@ export default function App() {
           onEditListing={listing => { setEditListing(listing); setShowCreateListing(true); }}
           onDeleteListing={id => void handleDeleteListing(id)} />;
       case "chat":
-        return <ChatPage lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated}
+        return <ChatPage initialConversationId={conversationId} lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated}
           onSignIn={() => setCurrentPage("auth")} onLeaveReview={handleLeaveReview} />;
       case "profile":
         return <ProfilePage lang={lang} currentUser={currentUser} viewUserId={viewUserId}

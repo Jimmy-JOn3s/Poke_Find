@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from marketplace.models import Listing
-from messaging.models import Conversation, Deal, Offer
+from messaging.models import Conversation, Deal, Message, Offer
 
 
 User = get_user_model()
@@ -57,3 +57,30 @@ class DealFlowApiTests(APITestCase):
         self.assertEqual(second.data["status"], "completed")
         self.listing.refresh_from_db()
         self.assertEqual(self.listing.status, Listing.Status.SOLD)
+
+    def test_unread_counts_are_per_participant_and_only_mark_loaded_messages(self):
+        first = Message.objects.create(conversation=self.conversation, author=self.seller, body="Hello")
+        second = Message.objects.create(conversation=self.conversation, author=self.seller, body="Still available")
+        Message.objects.create(conversation=self.conversation, author=self.buyer, body="Thanks")
+        url = f"/api/conversations/{self.conversation.id}/"
+        self.client.force_authenticate(self.buyer)
+        self.assertEqual(self.client.get(url).data["unread_count"], 2)
+        read = self.client.post(url + "read/", {"message_id": first.id})
+        self.assertEqual(read.status_code, status.HTTP_200_OK)
+        self.assertEqual(read.data["unread_count"], 1)
+        self.client.post(url + "read/", {"message_id": second.id})
+        self.client.post(url + "read/", {"message_id": first.id})
+        self.assertEqual(self.client.get(url).data["unread_count"], 0)
+        self.client.force_authenticate(self.seller)
+        self.assertEqual(self.client.get(url).data["unread_count"], 1)
+
+    def test_read_requires_participant_and_message_from_same_conversation(self):
+        message = Message.objects.create(conversation=self.conversation, author=self.seller, body="Hello")
+        url = f"/api/conversations/{self.conversation.id}/read/"
+        self.client.force_authenticate(self.stranger)
+        self.assertEqual(self.client.post(url, {"message_id": message.id}).status_code, status.HTTP_404_NOT_FOUND)
+        other = Conversation.objects.create(listing=self.listing, buyer=self.stranger, seller=self.seller)
+        foreign_message = Message.objects.create(conversation=other, author=self.seller, body="Private")
+        self.client.force_authenticate(self.buyer)
+        self.assertEqual(self.client.post(url, {"message_id": foreign_message.id}).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.post(url, {}).status_code, status.HTTP_400_BAD_REQUEST)

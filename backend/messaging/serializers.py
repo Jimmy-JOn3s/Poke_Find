@@ -101,11 +101,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     listing_id = serializers.PrimaryKeyRelatedField(source="listing", queryset=Listing.objects.filter(status=Listing.Status.ACTIVE), write_only=True)
     listing = serializers.SerializerMethodField()
     latest_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
     deal = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ("id", "listing_id", "listing", "buyer", "seller", "latest_message", "deal", "created_at", "updated_at")
+        fields = ("id", "listing_id", "listing", "buyer", "seller", "latest_message", "unread_count", "deal", "created_at", "updated_at")
         read_only_fields = ("id", "buyer", "seller", "created_at", "updated_at")
 
     def get_deal(self, obj):
@@ -116,6 +117,14 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_listing(self, obj):
         return {"id": obj.listing_id, "product_name": obj.listing.product_name, "asking_price": str(obj.listing.asking_price), "currency": obj.listing.currency}
+
+    def get_unread_count(self, obj):
+        user = self.context["request"].user
+        read_at = obj.buyer_read_at if user.id == obj.buyer_id else obj.seller_read_at
+        messages = obj.messages.exclude(author=user)
+        if read_at:
+            messages = messages.filter(created_at__gt=read_at)
+        return messages.count()
 
     def get_latest_message(self, obj):
         message = obj.messages.last()
@@ -129,3 +138,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         conversation, _ = Conversation.objects.get_or_create(listing=listing, buyer=user, seller=listing.seller)
         return conversation
 
+
+
+class ReadConversationSerializer(serializers.Serializer):
+    message_id = serializers.IntegerField(min_value=1)

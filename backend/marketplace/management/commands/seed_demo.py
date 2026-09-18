@@ -49,6 +49,17 @@ class Command(BaseCommand):
         buyer.set_password("PokeFind123!")
         buyer.save()
 
+        buyer_two, _ = User.objects.update_or_create(
+            username="demo-buyer2",
+            defaults={
+                "email": "buyer2@pokefind.local", "display_name": "Eevee Collector",
+                "role": "personal", "preferred_language": "en", "preferred_currency": "THB",
+                "location": "Bangkok",
+            },
+        )
+        buyer_two.set_password("PokeFind123!")
+        buyer_two.save()
+
         # Card images from TCGdex (https://tcgdex.dev). Thai-print SV2a cards prefer th scans when available.
         fixtures = [
             # English print, English listing title
