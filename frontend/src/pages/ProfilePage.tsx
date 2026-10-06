@@ -208,7 +208,7 @@ export default function ProfilePage({
                       ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
                       : undefined,
                   }}>
-                  <div className="relative aspect-square overflow-hidden scanlines"
+                  <div className="relative aspect-square overflow-hidden"
                     style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}33, ${listing.gradientTo}44)` }}>
                     <CardArt
                       imageUrl={listing.imageUrl}

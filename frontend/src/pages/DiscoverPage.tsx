@@ -145,7 +145,7 @@ function ListingCard({ listing, t, lang, displayCurrency, onClick }: { listing: 
     <button onClick={onClick} className="text-left overflow-hidden card-hover listing-card"
       style={{ borderColor: rarityBorder[listing.rarity] || undefined }}>
       {/* Card art */}
-      <div className="relative aspect-[2.5/3.5] overflow-hidden scanlines"
+      <div className="relative aspect-[2.5/3.5] overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}25, ${listing.gradientTo}40)` }}>
         <CardArt
           imageUrl={listing.imageUrl}

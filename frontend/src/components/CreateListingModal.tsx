@@ -155,7 +155,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
                   aria-label={t.listingPhoto}
                   onChange={e => pickPhoto(e.target.files?.[0] ?? null)}
                 />
-                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] overflow-hidden scanlines mb-2 detail-stat">
+                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] overflow-hidden mb-2 detail-stat">
                   <CardArt
                     imageUrl={previewImageUrl}
                     typeIcon={typeIcon}
@@ -293,7 +293,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
 
               {/* Preview card */}
               <div className="listing-card overflow-hidden price-block">
-                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] scanlines overflow-hidden">
+                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] overflow-hidden">
                   <CardArt
                     imageUrl={previewImageUrl}
                     typeIcon={typeIcon}

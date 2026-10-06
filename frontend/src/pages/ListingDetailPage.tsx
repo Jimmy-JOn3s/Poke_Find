@@ -38,7 +38,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
   return (
     <div className="flex flex-col md:flex-row min-h-full bg-background">
       {/* Card art hero */}
-      <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 overflow-hidden scanlines md:sticky md:top-0"
+      <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 overflow-hidden md:sticky md:top-0"
         style={{ background: `linear-gradient(160deg, ${listing.gradientFrom}33 0%, ${listing.gradientTo}55 100%)` }}>
         <CardArt
           imageUrl={listing.imageUrl}
