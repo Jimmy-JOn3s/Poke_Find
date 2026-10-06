@@ -1,6 +1,9 @@
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -52,6 +55,21 @@ class ListingApiTests(APITestCase):
         self.client.force_authenticate(self.other)
         forbidden = self.client.patch(f"/api/listings/{self.listing.id}/", {"asking_price": "1.00"}, format="json")
         self.assertEqual(forbidden.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_seller_can_upload_listing_photo(self):
+        buffer = BytesIO()
+        Image.new("RGB", (8, 8), color="red").save(buffer, format="PNG")
+        buffer.seek(0)
+        upload = SimpleUploadedFile("card.png", buffer.read(), content_type="image/png")
+        self.client.force_authenticate(self.seller)
+        response = self.client.post("/api/listings/", {
+            "product_name": "Photo Test", "set_name": "151", "set_code": "SV2A",
+            "card_number": "001/165", "condition": "NM", "card_language": "en",
+            "rarity": "rare", "asking_price": "100.00", "currency": "THB",
+            "quantity": 1, "description": "", "status": "active", "photo": upload,
+        }, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["photo"].startswith("/media/listings/"))
 
     def test_save_action_is_idempotent_and_can_unsave(self):
         self.client.force_authenticate(self.other)

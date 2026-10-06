@@ -208,7 +208,7 @@ export default function ProfilePage({
                       ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
                       : undefined,
                   }}>
-                  <div className="relative aspect-square flex items-center justify-center overflow-hidden scanlines"
+                  <div className="relative aspect-square overflow-hidden scanlines"
                     style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}33, ${listing.gradientTo}44)` }}>
                     <CardArt
                       imageUrl={listing.imageUrl}
@@ -217,10 +217,10 @@ export default function ProfilePage({
                       gradientTo={listing.gradientTo}
                       alt={listing.productName}
                       iconClassName="text-4xl"
-                      className="p-1"
+                      fill
                     />
                     {listing.status === 'completed' && (
-                      <div className="absolute inset-0 flex items-center justify-center"
+                      <div className="absolute inset-0 z-30 flex items-center justify-center"
                         style={{ background: 'color-mix(in srgb, var(--color-success) 12%, transparent)' }}>
                         <span className="font-pixel text-[8px] px-2 py-1 badge-verified">✓ {t.sold}</span>
                       </div>

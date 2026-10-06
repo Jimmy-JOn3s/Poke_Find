@@ -122,7 +122,7 @@ export default function App() {
     setCurrentPage("profile");
   };
 
-  const handleCreateListing = async (data: Partial<Listing>) => {
+  const handleCreateListing = async (data: Partial<Listing>, photoFile?: File | null) => {
     setActionError("");
     const payload = {
       product_name: data.productName, set_name: data.set, set_code: data.setCode,
@@ -132,10 +132,11 @@ export default function App() {
     };
     try {
       if (editListing) {
-        const updated = mapListing(await api.updateListing(editListing.id, payload));
+        const updated = mapListing(await api.updateListing(editListing.id, payload, photoFile));
         setListings(current => current.map(item => item.id === updated.id ? updated : item));
+        if (selectedListing?.id === updated.id) setSelectedListing(updated);
       } else {
-        await create(payload);
+        await create(payload, photoFile);
       }
       setShowCreateListing(false);
       setEditListing(undefined);
@@ -212,7 +213,7 @@ export default function App() {
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>
       </main>
       {showCreateListing && <CreateListingModal lang={lang} onClose={() => { setShowCreateListing(false); setEditListing(undefined); }}
-        onSubmit={data => void handleCreateListing(data)} editListing={editListing} sellerRole={currentUser?.role || "personal"} />}
+        onSubmit={(data, photoFile) => void handleCreateListing(data, photoFile)} editListing={editListing} sellerRole={currentUser?.role || "personal"} />}
     </div>
   );
 }
