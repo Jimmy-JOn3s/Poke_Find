@@ -9,6 +9,8 @@ class Conversation(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="conversations")
     buyer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="buying_conversations")
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="selling_conversations")
+    buyer_read_at = models.DateTimeField(null=True, blank=True)
+    seller_read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

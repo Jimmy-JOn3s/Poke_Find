@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from .models import Conversation, Deal, Offer
 from .serializers import (
     ConversationSerializer, DealSerializer, MessageSerializer, OfferSerializer,
-    ReviewCreateSerializer, ReviewSerializer,
+    ReadConversationSerializer, ReviewCreateSerializer, ReviewSerializer,
 )
 from .services import confirm_deal, create_review, transition_offer
 
@@ -26,6 +26,22 @@ class ConversationViewSet(viewsets.ModelViewSet):
         ).prefetch_related("deal__reviews").filter(
             Q(buyer=self.request.user) | Q(seller=self.request.user)
         )
+
+    @action(detail=True, methods=("post",))
+    def read(self, request, pk=None):
+        conversation = self.get_object()
+        serializer = ReadConversationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = conversation.messages.filter(pk=serializer.validated_data["message_id"]).first()
+        if message is None:
+            raise ValidationError({"message_id": "Message does not belong to this conversation"})
+        field = "buyer_read_at" if request.user.id == conversation.buyer_id else "seller_read_at"
+        # Mark only messages already displayed, and never move the read time backwards.
+        Conversation.objects.filter(pk=conversation.pk).filter(
+            Q(**{f"{field}__isnull": True}) | Q(**{f"{field}__lt": message.created_at})
+        ).update(**{field: message.created_at})
+        conversation.refresh_from_db()
+        return Response(self.get_serializer(conversation).data)
 
     @action(detail=True, methods=("get", "post"))
     def messages(self, request, pk=None):

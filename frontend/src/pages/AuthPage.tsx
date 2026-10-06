@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { AppLang, UserRole } from '../types';
 import { i18n } from '../i18n';
 
@@ -12,6 +12,8 @@ interface Props {
 
 export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, loading }: Props) {
   const t = i18n[lang];
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
+  const lastTitleTap = useRef<number | null>(null);
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -24,6 +26,24 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const [backUploaded, setBackUploaded] = useState(false);
   const [verifySubmitted, setVerifySubmitted] = useState(false);
 
+  // Reveal demo accounts on a double-tap, or keyboard activation of the title.
+  const toggleDemoAccounts = (keyboard: boolean) => {
+    const now = Date.now();
+    if (keyboard || (lastTitleTap.current !== null && now - lastTitleTap.current < 400)) {
+      setShowDemoAccounts(value => !value);
+      lastTitleTap.current = null;
+    } else {
+      lastTitleTap.current = now;
+    }
+  };
+  const fillDemoAccount = (account: 'buyer' | 'buyer2' | 'seller') => {
+    setMode('signin');
+    setStep(1);
+    setMagicSent(false);
+    setEmail(`${account}@pokefind.local`);
+    setPassword('PokeFind123!');
+  };
+
   const totalSteps = mode === 'signup' ? 3 : 1;
 
   const inputClass = 'field-input font-body text-sm';
@@ -31,13 +51,20 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   return (
     <div className="flex flex-col md:flex-row min-h-full overflow-y-auto bg-background">
       {/* Hero */}
-      <div className="relative overflow-hidden pt-14 md:pt-0 pb-8 md:pb-0 px-6 md:px-10 lg:px-16 text-center md:text-left pixel-bg md:w-2/5 lg:w-5/12 shrink-0 flex items-center profile-hero">
+      <div className="relative overflow-hidden pt-14 md:pt-0 pb-8 md:pb-0 px-6 md:px-10 lg:px-16 text-center pixel-bg md:w-2/5 lg:w-5/12 shrink-0 flex items-center justify-center profile-hero">
         <div className="absolute inset-0 profile-hero-glow" />
-        <div className="relative md:max-w-sm">
+        <div className="relative w-full md:max-w-sm">
           <p className="font-pixel text-[10px] mb-3 text-accent" style={{ letterSpacing: '0.15em' }}>POKEFIND</p>
           <div className="text-5xl md:text-6xl mb-2" style={{ filter: 'drop-shadow(0 0 16px rgba(255,214,0,0.6))' }}>⚡</div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-            {mode === 'signin' ? t.welcomeBack : t.createAccount}
+            {import.meta.env.DEV ? (
+              <button type="button" onClick={event => toggleDemoAccounts(event.detail === 0)}
+                aria-expanded={showDemoAccounts} aria-controls="demo-accounts"
+                title={lang === 'th' ? 'แตะสองครั้งเพื่อแสดงบัญชีทดลอง' : 'Double-tap to show demo accounts'}
+                className="w-full text-center select-none touch-manipulation rounded focus-visible:outline-2 focus-visible:outline-primary">
+                {mode === 'signin' ? t.welcomeBack : t.createAccount}
+              </button>
+            ) : (mode === 'signin' ? t.welcomeBack : t.createAccount)}
           </h1>
           <p className="text-muted-foreground text-sm mt-1 md:mt-2">
             {lang === 'th' ? 'ตลาดซื้อขายการ์ด Pokémon ที่น่าเชื่อถือ' : 'Thailand\'s trusted Pokémon card marketplace'}
@@ -48,7 +75,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
       <div className="flex-1 flex flex-col min-w-0 md:justify-center md:px-8 lg:px-12 md:py-8">
       {/* Progress dots */}
       {mode === 'signup' && (
-        <div className="flex justify-center md:justify-start gap-2 py-3 px-5 md:px-0">
+        <div className="flex justify-center gap-2 py-3 px-5 md:px-0">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="h-1.5 transition-all duration-300"
               style={{ width: step === i + 1 ? 24 : 8, background: step > i ? 'var(--color-primary)' : 'var(--color-toggle-off)', borderRadius: 1 }} />
@@ -56,7 +83,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
         </div>
       )}
 
-      <div className="flex-1 md:flex-none px-5 md:px-0 pb-8 md:pb-0 bottom-safe max-w-md md:max-w-lg w-full md:mx-0">
+      <div className="flex-1 md:flex-none px-5 md:px-0 pb-8 md:pb-0 bottom-safe max-w-md md:max-w-lg w-full mx-auto">
         {/* Step 1: Credentials */}
         {step === 1 && (
           <div className="animate-slide-up">
@@ -70,6 +97,22 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
                 </button>
               ))}
             </div>
+
+            {import.meta.env.DEV && showDemoAccounts && (
+              <div id="demo-accounts" className="mb-4 rounded border border-primary/30 bg-primary/10 p-3">
+                <p className="text-xs font-bold text-center mb-2 text-primary">
+                  {lang === 'th' ? 'บัญชีทดลอง · เติมข้อมูลเข้าสู่ระบบ' : 'Debug · Fill demo credentials'}
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" disabled={loading} onClick={() => fillDemoAccount('buyer')}
+                    className="flex-1 py-2 text-sm chip-btn">{lang === 'th' ? 'ผู้ซื้อ' : 'Buyer'}</button>
+                  <button type="button" disabled={loading} onClick={() => fillDemoAccount('buyer2')}
+                    className="flex-1 py-2 text-sm chip-btn">{lang === 'th' ? 'ผู้ซื้อ 2' : 'Buyer 2'}</button>
+                  <button type="button" disabled={loading} onClick={() => fillDemoAccount('seller')}
+                    className="flex-1 py-2 text-sm chip-btn">{lang === 'th' ? 'ผู้ขาย' : 'Seller'}</button>
+                </div>
+              </div>
+            )}
 
             {/* Google */}
             <button disabled title={lang === 'th' ? 'จะเพิ่มในเวอร์ชันถัดไป' : 'Planned for a later release'}

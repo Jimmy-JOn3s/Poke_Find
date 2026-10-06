@@ -90,6 +90,7 @@ export interface ApiConversation {
   buyer: ApiUser;
   seller: ApiUser;
   latest_message: ApiMessage | null;
+  unread_count: number;
   deal: ApiDeal | null;
   updated_at: string;
 }
@@ -213,6 +214,9 @@ export const api = {
     return request("/conversations/", { method: "POST", body: JSON.stringify({ listing_id: listingId }) });
   },
   messages(id: number): Promise<ApiMessage[]> { return request(`/conversations/${id}/messages/`); },
+  markConversationRead(id: number, messageId: number): Promise<ApiConversation> {
+    return request(`/conversations/${id}/read/`, { method: "POST", body: JSON.stringify({ message_id: messageId }) });
+  },
   offers(id: number): Promise<ApiOffer[]> { return request(`/conversations/${id}/offers/`); },
   sendMessage(id: number, body: string): Promise<ApiMessage> {
     return request(`/conversations/${id}/messages/`, { method: "POST", body: JSON.stringify({ body }) });
