@@ -38,7 +38,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
   return (
     <div className="flex flex-col md:flex-row min-h-full bg-background">
       {/* Card art hero */}
-      <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 flex items-center justify-center overflow-hidden scanlines md:sticky md:top-0"
+      <div className="relative h-72 md:h-auto md:min-h-full md:w-[min(42%,480px)] md:shrink-0 overflow-hidden md:sticky md:top-0"
         style={{ background: `linear-gradient(160deg, ${listing.gradientFrom}33 0%, ${listing.gradientTo}55 100%)` }}>
         <CardArt
           imageUrl={listing.imageUrl}
@@ -47,7 +47,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           gradientTo={listing.gradientTo}
           alt={listing.productName}
           iconClassName="text-8xl md:text-9xl"
-          className="p-4 md:p-6"
+          fill
         />
 
         <button onClick={onBack}
@@ -61,7 +61,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           ♥
         </button>
 
-        <div className="absolute bottom-4 left-4 font-pixel text-[9px] px-2 py-1 listing-badge text-primary"
+        <div className="absolute bottom-4 left-4 z-30 font-pixel text-[9px] px-2 py-1 listing-badge text-primary"
           style={{ border: '1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)' }}>
           {rarityLabel}
         </div>

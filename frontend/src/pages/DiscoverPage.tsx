@@ -145,7 +145,7 @@ function ListingCard({ listing, t, lang, displayCurrency, onClick }: { listing: 
     <button onClick={onClick} className="text-left overflow-hidden card-hover listing-card"
       style={{ borderColor: rarityBorder[listing.rarity] || undefined }}>
       {/* Card art */}
-      <div className="relative aspect-[2.5/3.5] flex items-center justify-center overflow-hidden scanlines"
+      <div className="relative aspect-[2.5/3.5] overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}25, ${listing.gradientTo}40)` }}>
         <CardArt
           imageUrl={listing.imageUrl}
@@ -153,21 +153,22 @@ function ListingCard({ listing, t, lang, displayCurrency, onClick }: { listing: 
           gradientFrom={listing.gradientFrom}
           gradientTo={listing.gradientTo}
           alt={listing.productName}
+          fill
         />
         {/* Condition */}
-        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 font-pixel text-[8px] listing-badge"
+        <div className="absolute top-1.5 left-1.5 z-30 px-1.5 py-0.5 font-pixel text-[8px] listing-badge"
           style={{ color: conditionColor(listing.condition), border: `1px solid ${conditionColor(listing.condition)}40` }}>
           {listing.condition}
         </div>
         {/* Language */}
-        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[9px] font-semibold listing-badge text-muted-foreground font-display">
+        <div className="absolute top-1.5 right-1.5 z-30 px-1.5 py-0.5 text-[9px] font-semibold listing-badge text-muted-foreground font-display">
           {listing.language.toUpperCase()}
         </div>
         {listing.sellerRole === 'business' && (
-          <div className="absolute bottom-1.5 left-1.5 badge-business">{t.businessBadge}</div>
+          <div className="absolute bottom-1.5 left-1.5 z-30 badge-business">{t.businessBadge}</div>
         )}
         {listing.sellerVerified && (
-          <div className="absolute bottom-1.5 right-1.5 badge-verified">✓</div>
+          <div className="absolute bottom-1.5 right-1.5 z-30 badge-verified">✓</div>
         )}
       </div>
 

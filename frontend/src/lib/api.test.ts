@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildListingQuery, mapListing } from "./api";
+import { buildListingQuery, mapListing, resolveMediaUrl } from "./api";
 
 
 describe("listing API adapter", () => {
@@ -29,6 +29,31 @@ describe("listing API adapter", () => {
     expect(listing.sellerRole).toBe("business");
     expect(listing.currency).toBe("THB");
     expect(listing.listedPrice).toBe(2100);
+  });
+
+  it("prefers uploaded photo URLs over catalog image_url", () => {
+    const listing = mapListing({
+      id: 1,
+      seller: { id: 1, display_name: "Seller", role: "personal", is_verified_seller: false },
+      product_name: "Test",
+      set_name: "Set",
+      set_code: "X",
+      card_number: "1",
+      condition: "NM",
+      card_language: "en",
+      rarity: "rare",
+      asking_price: "10.00",
+      currency: "THB",
+      quantity: 1,
+      description: "",
+      image_url: "https://assets.tcgdex.net/example.webp",
+      status: "active",
+      created_at: "2026-01-01T00:00:00Z",
+      is_saved: false,
+      photo: "/media/listings/card.png",
+    });
+    expect(listing.imageUrl).toBe(resolveMediaUrl("/media/listings/card.png"));
+    expect(listing.imageUrl).not.toContain("tcgdex");
   });
 
   it("omits empty filters and keeps supported search filters", () => {
