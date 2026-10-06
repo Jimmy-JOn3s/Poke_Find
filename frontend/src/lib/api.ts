@@ -32,6 +32,16 @@ function apiBase(): string {
   return resolveApiBase(import.meta.env.VITE_API_URL);
 }
 
+export function apiOrigin(): string {
+  return apiBase().replace(/\/api\/?$/, "");
+}
+
+export function resolveMediaUrl(path: string): string {
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${apiOrigin()}${normalized}`;
+}
+
 export interface ApiUser {
   id: number;
   username?: string;
@@ -188,6 +198,9 @@ export function mapListing(item: ApiListing): Listing {
     ["#06B6D4", "#0EA5E9", "🐉"],
   ];
   const palette = palettes[item.id % palettes.length];
+  const uploadedPhoto = item.photo ? resolveMediaUrl(item.photo) : undefined;
+  const catalogImage = item.image_url || undefined;
+  const displayImage = uploadedPhoto || catalogImage;
   return {
     id: String(item.id), sellerId: String(item.seller.id), sellerName: item.seller.display_name,
     sellerAvatar: item.seller.display_name.slice(0, 1), sellerRole: item.seller.role,
@@ -198,8 +211,8 @@ export function mapListing(item: ApiListing): Listing {
     quantity: item.quantity, status: item.status as Listing["status"],
     gradientFrom: palette[0], gradientTo: palette[1], typeIcon: palette[2],
     createdAt: item.created_at.slice(0, 10), views: 0, likes: 0,
-    description: item.description, imageUrl: item.image_url || undefined,
-    photo: item.photo || undefined, isSaved: item.is_saved,
+    description: item.description, imageUrl: displayImage,
+    photo: uploadedPhoto, isSaved: item.is_saved,
   };
 }
 
@@ -289,6 +302,15 @@ function send(path: string, init: RequestInit, token: string | null): Promise<Re
   return fetch(`${apiBase()}${path}`, { ...init, headers });
 }
 
+function listingFormData(payload: Record<string, unknown>, photoFile: File): FormData {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) form.append(key, String(value));
+  });
+  form.append("photo", photoFile);
+  return form;
+}
+
 // Credential endpoints never carry a session: a stale token would otherwise turn a wrong password
 // (401) into a refresh plus a second login attempt, doubling the attempts the rate limit counts.
 const CREDENTIAL_PATHS = new Set([
@@ -352,10 +374,18 @@ export const api = {
   updateMe(payload: Partial<ApiUser>): Promise<ApiUser> {
     return request("/auth/me/", { method: "PATCH", body: JSON.stringify(payload) });
   },
-  createListing(payload: Record<string, unknown>): Promise<ApiListing> {
+  createListing(payload: Record<string, unknown>, photoFile?: File | null): Promise<ApiListing> {
+    if (photoFile) {
+      const body = listingFormData(payload, photoFile);
+      return request("/listings/", { method: "POST", body });
+    }
     return request("/listings/", { method: "POST", body: JSON.stringify(payload) });
   },
-  updateListing(id: string, payload: Record<string, unknown>): Promise<ApiListing> {
+  updateListing(id: string, payload: Record<string, unknown>, photoFile?: File | null): Promise<ApiListing> {
+    if (photoFile) {
+      const body = listingFormData(payload, photoFile);
+      return request(`/listings/${id}/`, { method: "PATCH", body });
+    }
     return request(`/listings/${id}/`, { method: "PATCH", body: JSON.stringify(payload) });
   },
   deleteListing(id: string): Promise<void> {
