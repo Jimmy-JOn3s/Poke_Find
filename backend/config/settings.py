@@ -1,11 +1,30 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "pokefind-local-development-secret-key-only")
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host]
+# Local development reads backend/.env; real environment variables always win over the file.
+load_dotenv(os.getenv("DJANGO_ENV_FILE", BASE_DIR / ".env"), override=False)
+
+
+def env(name: str, default: str | None = None) -> str:
+    """Return a required setting from the environment, failing loudly when it is missing."""
+    value = os.getenv(name, default)
+    if value is None or not value.strip():
+        raise ImproperlyConfigured(f"Set the {name} environment variable (see backend/.env.example).")
+    return value.strip()
+
+
+def env_list(name: str) -> list[str]:
+    return [item.strip() for item in env(name).split(",") if item.strip()]
+
+
+DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
+SECRET_KEY = env("DJANGO_SECRET_KEY")
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -48,14 +67,18 @@ WSGI_APPLICATION = "config.wsgi.application"
 if os.getenv("POSTGRES_DB"):
     DATABASES = {"default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ["POSTGRES_DB"],
-        "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT", "5432"),
     }}
-else:
+elif DEBUG:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+else:
+    raise ImproperlyConfigured(
+        "Set POSTGRES_DB and the other POSTGRES_* variables. SQLite is only allowed with DJANGO_DEBUG=1."
+    )
 
 AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = "en-us"
@@ -74,12 +97,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 24,
 }
-CORS_ALLOWED_ORIGINS = [
-    origin
-    for origin in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173",
-    ).split(",")
-    if origin
-]
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "31536000"))
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    if os.getenv("DJANGO_BEHIND_TLS_PROXY") == "1":
+        # Only trust X-Forwarded-Proto when our own proxy sets it.
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # HSTS for subdomains and preload-list submission are one-way commitments; decide them with the real domain.
+    SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
