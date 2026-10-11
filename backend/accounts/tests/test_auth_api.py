@@ -1,8 +1,8 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
+from common.testing import ApiTestCase
 
 
-class AuthApiTests(APITestCase):
+class AuthApiTests(ApiTestCase):
     def test_register_returns_tokens_and_bilingual_preferences(self):
         response = self.client.post("/api/auth/register/", {
             "username": "mai",

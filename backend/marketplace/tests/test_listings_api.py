@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.test import APITestCase
+from common.testing import ApiTestCase
 
 from marketplace.models import Listing
 
@@ -10,8 +10,9 @@ from marketplace.models import Listing
 User = get_user_model()
 
 
-class ListingApiTests(APITestCase):
+class ListingApiTests(ApiTestCase):
     def setUp(self):
+        super().setUp()
         self.seller = User.objects.create_user(
             username="seller", email="seller@example.com", password="password123",
             display_name="Bangkok Cards",

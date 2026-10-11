@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "accounts",
     "marketplace",
     "messaging",
@@ -101,7 +103,28 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 24,
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("THROTTLE_ANON_RATE", "120/min"),
+        "user": os.getenv("THROTTLE_USER_RATE", "600/min"),
+        "auth": os.getenv("THROTTLE_AUTH_RATE", "10/min"),
+    },
+    # Number of proxies in front of Django that append to X-Forwarded-For. DRF's default (None)
+    # would trust whatever X-Forwarded-For the client sends, letting attackers dodge rate limits.
+    "NUM_PROXIES": int(os.getenv("DJANGO_NUM_PROXIES", "0")),
 }
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "15"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "7"))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+if os.getenv("REDIS_URL"):
+    # Share rate-limit counters across worker processes.
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": os.environ["REDIS_URL"]}}
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
 

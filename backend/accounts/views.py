@@ -2,9 +2,10 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenBlacklistView, TokenObtainPairView
 
 from messaging.models import Review
 from messaging.serializers import ReviewSerializer
@@ -18,11 +19,22 @@ from .serializers import (
 User = get_user_model()
 
 
-class LoginView(TokenObtainPairView):
+class AuthAttemptThrottleMixin:
+    """Strict per-IP limit for endpoints that check a password or create accounts."""
+
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "auth"
+
+
+class LoginView(AuthAttemptThrottleMixin, TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenObtainPairSerializer
 
 
-class RegisterView(generics.CreateAPIView):
+class LogoutView(TokenBlacklistView):
+    """Blacklists the posted refresh token so it can't mint new access tokens."""
+
+
+class RegisterView(AuthAttemptThrottleMixin, generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
 
