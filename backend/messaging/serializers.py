@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from accounts.serializers import UserSerializer
+from accounts.serializers import PublicUserSerializer
 from marketplace.models import Listing
 from .models import Conversation, Deal, Message, Offer, Review
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
+    author = PublicUserSerializer(read_only=True)
 
     class Meta:
         model = Message
@@ -15,7 +15,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(serializers.ModelSerializer):
-    proposer = UserSerializer(read_only=True)
+    proposer = PublicUserSerializer(read_only=True)
 
     class Meta:
         model = Offer
@@ -30,8 +30,8 @@ class OfferSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    reviewer = UserSerializer(read_only=True)
-    reviewee = UserSerializer(read_only=True)
+    reviewer = PublicUserSerializer(read_only=True)
+    reviewee = PublicUserSerializer(read_only=True)
     listing_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -96,8 +96,8 @@ class DealSerializer(serializers.ModelSerializer):
 
 
 class ConversationSerializer(serializers.ModelSerializer):
-    buyer = UserSerializer(read_only=True)
-    seller = UserSerializer(read_only=True)
+    buyer = PublicUserSerializer(read_only=True)
+    seller = PublicUserSerializer(read_only=True)
     listing_id = serializers.PrimaryKeyRelatedField(source="listing", queryset=Listing.objects.filter(status=Listing.Status.ACTIVE), write_only=True)
     listing = serializers.SerializerMethodField()
     latest_message = serializers.SerializerMethodField()

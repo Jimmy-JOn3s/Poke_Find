@@ -1,11 +1,11 @@
 from rest_framework import serializers
 
-from accounts.serializers import UserSerializer
+from accounts.serializers import PublicUserSerializer
 from .models import Listing
 
 
 class ListingSerializer(serializers.ModelSerializer):
-    seller = UserSerializer(read_only=True)
+    seller = PublicUserSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
 
     class Meta:

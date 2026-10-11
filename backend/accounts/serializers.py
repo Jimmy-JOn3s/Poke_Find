@@ -33,6 +33,16 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "username", "email", "is_verified_seller", "date_joined")
 
 
+class PublicUserSerializer(serializers.ModelSerializer):
+    """What other people may see about a user. Never add email, username or preferences here:
+    usernames are generated from the email address, so they leak it too."""
+
+    class Meta:
+        model = User
+        fields = ("id", "display_name", "role", "avatar", "location", "is_verified_seller")
+        read_only_fields = fields
+
+
 class PublicUserProfileSerializer(serializers.ModelSerializer):
     rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
