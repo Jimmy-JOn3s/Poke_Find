@@ -12,7 +12,8 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 - Listing discovery, search, filters, creation, editing, and deletion
 - Saved-listing API
 - Private buyer/seller conversations and messages
-- Offers, seller acceptance or rejection, and two-party trade completion
+- Offers and counter-offers answered by the other party; accepting reserves the
+  listing, either side can cancel before confirming, and both confirm completion
 - Django admin and deterministic demo data
 
 Payments, escrow, delivery booking, live exchange rates, and production
@@ -44,13 +45,21 @@ Run these commands from the repository root.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env`: set `DJANGO_SECRET_KEY` (generate one with
+`python3 -c "import secrets; print(secrets.token_urlsafe(50))"`) and
+`DEMO_SEED_PASSWORD` (the password the demo accounts will get). Then:
+
+```bash
 .venv/bin/python backend/manage.py migrate
 .venv/bin/python backend/manage.py seed_demo
 .venv/bin/python backend/manage.py runserver 127.0.0.1:8000
 ```
 
-Local development uses `backend/db.sqlite3`; no database server or backend
-environment file is required.
+Django loads `backend/.env` automatically; real environment variables take
+precedence. Local development (`DJANGO_DEBUG=1`) uses `backend/db.sqlite3`.
 
 Verify the API at [http://127.0.0.1:8000/api/health/](http://127.0.0.1:8000/api/health/).
 The expected response is:
@@ -65,25 +74,24 @@ Open a second terminal:
 
 ```bash
 cd frontend
+cp .env.example .env.development.local
 pnpm install
 pnpm dev
 ```
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
-The frontend already defaults to `http://localhost:8000/api`. To use another
-API address:
-
-```bash
-cp .env.example .env
-```
-
-Then edit `VITE_API_URL` in `frontend/.env` and restart Vite.
+`VITE_API_URL` is required; there is no built-in default. Every build
+(Figma Make `deploy` and `deploy-preview`) refuses to run without it or with a
+`localhost` URL, so set the real API URL in the build environment.
 
 ## Demo accounts
 
-Running `seed_demo` creates both accounts below. Their shared password is
-`PokeFind123!`.
+`seed_demo` (development only, `DJANGO_DEBUG=1`) creates the accounts below.
+They all use the password in `DEMO_SEED_PASSWORD`. To make the hidden demo
+picker on the sign-in page fill it in, set `DEMO_PASSWORD` to the same value in
+`frontend/.env.development.local`. Only the local dev server sees it; it is
+never put into a build.
 
 | Role | Email |
 | --- | --- |
@@ -103,60 +111,49 @@ From the repository root:
 .venv/bin/python backend/manage.py check
 cd frontend
 pnpm test
-pnpm build
+VITE_API_URL=https://api.example.com/api pnpm build
 ```
+
+Builds fail on purpose when `VITE_API_URL` is missing or points at localhost. CI that
+runs backend tests on PostgreSQL with `DJANGO_DEBUG=0` must also set
+`DJANGO_SECURE_SSL_REDIRECT=0`.
 
 The frontend production bundle is written to `frontend/dist/`.
 
 ## Configuration
 
+Nothing secret or environment-specific is hard-coded. Startup fails with a
+message naming any missing required variable.
+
 ### Frontend
 
-| Variable | Default | Purpose |
+| Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_API_URL` | `http://localhost:8000/api` | Django API base URL |
-
-Vite reads `frontend/.env` automatically when it starts.
+| `VITE_API_URL` | yes | Django API base URL, including `/api` |
+| `DEMO_PASSWORD` | no | Local dev server only: fills the demo-account picker (never bundled) |
 
 ### Backend
 
-| Variable | Local default | Purpose |
-| --- | --- | --- |
-| `DJANGO_SECRET_KEY` | Development-only key | Django signing secret |
-| `DJANGO_DEBUG` | `1` | Enable Django debug mode |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Accepted host headers |
-| `CORS_ALLOWED_ORIGINS` | Local Vite origins | Allowed frontend origins |
-| `USD_TO_THB_RATE` | `35.00` | Fixed MVP display-conversion rate |
-| `POSTGRES_DB` | Unset | Setting this enables PostgreSQL |
-| `POSTGRES_USER` | `postgres` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | `postgres` | PostgreSQL password |
-| `POSTGRES_HOST` | `localhost` | PostgreSQL host |
-| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `DJANGO_SECRET_KEY` | yes | — | Signs sessions and JWTs |
+| `DJANGO_DEBUG` | no | `0` | `1` for local development only |
+| `DJANGO_ALLOWED_HOSTS` | yes | — | Accepted host headers |
+| `CORS_ALLOWED_ORIGINS` | yes | — | Allowed frontend origins |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` | in production | — | PostgreSQL connection (required when `DJANGO_DEBUG` is not `1`) |
+| `POSTGRES_PORT` | no | `5432` | PostgreSQL port |
+| `DJANGO_BEHIND_TLS_PROXY` | no | `0` | `1` when a proxy terminates TLS and sets `X-Forwarded-Proto` |
+| `DJANGO_SECURE_SSL_REDIRECT` | no | `1` | Redirect HTTP to HTTPS (production) |
+| `DJANGO_SECURE_HSTS_SECONDS` | no | `31536000` | HSTS max-age (production) |
+| `DJANGO_NUM_PROXIES` | no | `0` | Proxies appending to `X-Forwarded-For`; must match your infrastructure or rate limits break |
+| `REDIS_URL` | no | — | Shared cache for rate limits across workers |
+| `THROTTLE_ANON_RATE` / `THROTTLE_USER_RATE` / `THROTTLE_AUTH_RATE` | no | `120/min` / `600/min` / `10/min` | Rate limits (`auth` = login and register) |
+| `JWT_ACCESS_MINUTES` / `JWT_REFRESH_DAYS` | no | `15` / `7` | Token lifetimes |
+| `MAX_UPLOAD_MB` | no | `5` | Largest avatar/photo upload |
+| `USD_TO_THB_RATE` | no | `35.00` | Fixed MVP display-conversion rate |
+| `DEMO_SEED_PASSWORD` | for `seed_demo` | — | Password for demo accounts (dev only) |
 
-Django reads these variables from the process environment; it does not load
-`backend/.env.example` automatically. For example:
-
-```bash
-export DJANGO_SECRET_KEY='replace-with-a-long-random-secret'
-export DJANGO_DEBUG=0
-.venv/bin/python backend/manage.py runserver
-```
-
-## Optional PostgreSQL setup
-
-Create a PostgreSQL database and export all `POSTGRES_*` variables before
-running migrations:
-
-```bash
-export POSTGRES_DB=pokefind
-export POSTGRES_USER=postgres
-export POSTGRES_PASSWORD=postgres
-export POSTGRES_HOST=localhost
-export POSTGRES_PORT=5432
-.venv/bin/python backend/manage.py migrate
-```
-
-Unset `POSTGRES_DB` to return to the local SQLite database.
+See `backend/.env.example` for a ready-to-copy file.
 
 ## Useful URLs
 
@@ -215,14 +212,17 @@ Run migrations and reseed the local database:
 
 ### The frontend starts with stale account preferences
 
-Language, currency, and the JWT access token are stored in browser local
+Language, currency, and the JWT access and refresh tokens are stored in browser local
 storage. Sign out or clear storage for `127.0.0.1:5173` to reset the browser
 session.
 
 ## Production notes
 
-Before deployment, use PostgreSQL, rotate the secret key, disable debug mode,
-restrict allowed hosts and CORS, serve both applications over HTTPS, and move
-uploaded media to durable object storage. Add production-grade email, payment,
-delivery, monitoring, and WebSocket infrastructure only when those features
-enter scope.
+Run with `DJANGO_DEBUG` unset, PostgreSQL, a fresh `DJANGO_SECRET_KEY`, and
+exact `DJANGO_ALLOWED_HOSTS`/`CORS_ALLOWED_ORIGINS`. Set `DJANGO_NUM_PROXIES`
+and `DJANGO_BEHIND_TLS_PROXY` to match your load balancer, use `REDIS_URL`
+when running several workers, and cap request bodies in the proxy (for
+example nginx `client_max_body_size 6m`). `manage.py check --deploy` should
+report no issues. Run `manage.py flushexpiredtokens` daily to prune the JWT
+blacklist. Uploaded media still needs durable object storage before photos
+can be served.
