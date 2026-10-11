@@ -88,6 +88,41 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Passwords: Argon2id with Django's per-user salt plus a secret pepper kept outside the database.
+PASSWORD_PEPPER = env("DJANGO_PASSWORD_PEPPER")
+if len(PASSWORD_PEPPER) < 32:
+    raise ImproperlyConfigured("DJANGO_PASSWORD_PEPPER must be at least 32 characters (see backend/.env.example).")
+PASSWORD_HASHERS = [
+    "accounts.hashers.PepperedArgon2PasswordHasher",
+    # Only verifies hashes made before the switch; Django re-hashes them with the pepper at the next login.
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT_MINUTES", "60")) * 60
+
+# Public address of the web app; password-reset emails link here.
+FRONTEND_URL = env("FRONTEND_URL").rstrip("/")
+if not DEBUG and not FRONTEND_URL.startswith("https://"):
+    raise ImproperlyConfigured("FRONTEND_URL must use https:// in production.")
+
+if os.getenv("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env("EMAIL_HOST")
+    EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "0") == "1"
+    EMAIL_USE_TLS = not EMAIL_USE_SSL and os.getenv("EMAIL_USE_TLS", "1") == "1"
+    EMAIL_TIMEOUT = 10
+    DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+elif DEBUG:
+    # Local development prints emails, including reset links, to the runserver console.
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    raise ImproperlyConfigured(
+        "Set EMAIL_HOST and DEFAULT_FROM_EMAIL: production must be able to send password-reset emails."
+    )
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Bangkok"
 USE_I18N = True
@@ -112,6 +147,7 @@ REST_FRAMEWORK = {
         "anon": os.getenv("THROTTLE_ANON_RATE", "120/min"),
         "user": os.getenv("THROTTLE_USER_RATE", "600/min"),
         "auth": os.getenv("THROTTLE_AUTH_RATE", "10/min"),
+        "password_reset": os.getenv("THROTTLE_PASSWORD_RESET_RATE", "10/hour"),
     },
     # Number of proxies in front of Django that append to X-Forwarded-For. DRF's default (None)
     # would trust whatever X-Forwarded-For the client sends, letting attackers dodge rate limits.

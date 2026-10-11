@@ -142,3 +142,13 @@ class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
             if match:
                 attrs[self.username_field] = match.username
         return super().validate(attrs)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
+    new_password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)

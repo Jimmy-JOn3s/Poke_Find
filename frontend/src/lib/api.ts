@@ -228,7 +228,9 @@ function send(path: string, init: RequestInit, token: string | null): Promise<Re
 
 // Credential endpoints never carry a session: a stale token would otherwise turn a wrong password
 // (401) into a refresh plus a second login attempt, doubling the attempts the rate limit counts.
-const CREDENTIAL_PATHS = new Set(["/auth/login/", "/auth/register/"]);
+const CREDENTIAL_PATHS = new Set([
+  "/auth/login/", "/auth/register/", "/auth/password-reset/", "/auth/password-reset/confirm/",
+]);
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = CREDENTIAL_PATHS.has(path) ? null : readStorage(ACCESS_TOKEN_KEY);
@@ -266,6 +268,14 @@ export const api = {
     await fetch(`${apiBase()}/auth/logout/`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh }),
     }).catch(() => undefined);
+  },
+  requestPasswordReset(email: string): Promise<{ detail: string }> {
+    return request("/auth/password-reset/", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  confirmPasswordReset(uid: string, token: string, newPassword: string): Promise<{ detail: string }> {
+    return request("/auth/password-reset/confirm/", {
+      method: "POST", body: JSON.stringify({ uid, token, new_password: newPassword }),
+    });
   },
   me(): Promise<ApiUser> { return request("/auth/me/"); },
   updateMe(payload: Partial<ApiUser>): Promise<ApiUser> {

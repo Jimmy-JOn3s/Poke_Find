@@ -39,6 +39,13 @@ const th = {
   uploadFront: 'อัปโหลดด้านหน้า', uploadBack: 'อัปโหลดด้านหลัง',
   uploaded: 'อัปโหลดแล้ว',
   skipForNow: 'ข้ามสำหรับตอนนี้', completeVerification: 'ยืนยันตัวตน',
+  forgotPassword: 'ลืมรหัสผ่าน?', sendResetLink: 'ส่งลิงก์ตั้งรหัสผ่านใหม่',
+  forgotPasswordHelp: 'กรอกอีเมลของบัญชีด้านบน แล้วเราจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ให้',
+  resetLinkSent: 'หากมีบัญชีที่ใช้อีเมลนี้ เราได้ส่งลิงก์ไปแล้ว โปรดตรวจสอบกล่องจดหมาย',
+  resetPasswordTitle: 'ตั้งรหัสผ่านใหม่', newPassword: 'รหัสผ่านใหม่', confirmNewPassword: 'ยืนยันรหัสผ่านใหม่',
+  passwordsDontMatch: 'รหัสผ่านไม่ตรงกัน', saveNewPassword: 'บันทึกรหัสผ่านใหม่',
+  passwordUpdated: 'เปลี่ยนรหัสผ่านแล้ว และออกจากระบบทุกอุปกรณ์ โปรดเข้าสู่ระบบด้วยรหัสผ่านใหม่',
+  backToSignIn: 'ไปหน้าเข้าสู่ระบบ',
   startUsing: 'เริ่มใช้งาน',
 
   // Chat
@@ -131,6 +138,13 @@ const en: typeof th = {
   uploadFront: 'Upload Front', uploadBack: 'Upload Back',
   uploaded: 'Uploaded',
   skipForNow: 'Skip for Now', completeVerification: 'Complete Verification',
+  forgotPassword: 'Forgot password?', sendResetLink: 'Send reset link',
+  forgotPasswordHelp: "Enter your account email above and we'll send you a link to choose a new password.",
+  resetLinkSent: "If an account uses that email, we've sent a link. Check your inbox.",
+  resetPasswordTitle: 'Choose a new password', newPassword: 'New password', confirmNewPassword: 'Confirm new password',
+  passwordsDontMatch: "Passwords don't match", saveNewPassword: 'Save new password',
+  passwordUpdated: 'Password changed, and every device was signed out. Sign in with your new password.',
+  backToSignIn: 'Go to sign in',
   startUsing: 'Get Started',
 
   chatTitle: 'Messages', noChats: 'No conversations yet', typeMessage: 'Type a message...',

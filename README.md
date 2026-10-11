@@ -7,6 +7,7 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 ## MVP features
 
 - JWT registration and login for personal and business accounts
+- Password reset by email (single-use links that expire after an hour)
 - Thai and English interface preferences
 - THB and USD listing prices with configurable display conversion
 - Listing discovery, search, filters, creation, editing, and deletion
@@ -49,8 +50,9 @@ cp backend/.env.example backend/.env
 ```
 
 Edit `backend/.env`: set `DJANGO_SECRET_KEY` (generate one with
-`python3 -c "import secrets; print(secrets.token_urlsafe(50))"`) and
-`DEMO_SEED_PASSWORD` (the password the demo accounts will get). Then:
+`python3 -c "import secrets; print(secrets.token_urlsafe(50))"`),
+`DJANGO_PASSWORD_PEPPER` (generated the same way) and `DEMO_SEED_PASSWORD`
+(the password the demo accounts will get). Then:
 
 ```bash
 .venv/bin/python backend/manage.py migrate
@@ -60,6 +62,8 @@ Edit `backend/.env`: set `DJANGO_SECRET_KEY` (generate one with
 
 Django loads `backend/.env` automatically; real environment variables take
 precedence. Local development (`DJANGO_DEBUG=1`) uses `backend/db.sqlite3`.
+
+Password-reset emails are printed in the runserver console during local development.
 
 Verify the API at [http://127.0.0.1:8000/api/health/](http://127.0.0.1:8000/api/health/).
 The expected response is:
@@ -137,9 +141,15 @@ message naming any missing required variable.
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | yes | — | Signs sessions and JWTs |
+| `DJANGO_PASSWORD_PEPPER` | yes | — | Secret mixed into every password hash (≥ 32 chars). Never change or lose it: every user would have to reset |
 | `DJANGO_DEBUG` | no | `0` | `1` for local development only |
 | `DJANGO_ALLOWED_HOSTS` | yes | — | Accepted host headers |
 | `CORS_ALLOWED_ORIGINS` | yes | — | Allowed frontend origins |
+| `FRONTEND_URL` | yes | — | Public web-app URL used in reset emails (`https://` in production) |
+| `EMAIL_HOST`, `DEFAULT_FROM_EMAIL` | in production | — | SMTP server and sender for reset emails |
+| `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | no | `587` / — / — | SMTP connection |
+| `EMAIL_USE_TLS` / `EMAIL_USE_SSL` | no | `1` / `0` | SMTP encryption |
+| `PASSWORD_RESET_TIMEOUT_MINUTES` | no | `60` | How long a reset link works |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` | in production | — | PostgreSQL connection (required when `DJANGO_DEBUG` is not `1`) |
 | `POSTGRES_PORT` | no | `5432` | PostgreSQL port |
 | `DJANGO_BEHIND_TLS_PROXY` | no | `0` | `1` when a proxy terminates TLS and sets `X-Forwarded-Proto` |
@@ -147,7 +157,7 @@ message naming any missing required variable.
 | `DJANGO_SECURE_HSTS_SECONDS` | no | `31536000` | HSTS max-age (production) |
 | `DJANGO_NUM_PROXIES` | no | `0` | Proxies appending to `X-Forwarded-For`; must match your infrastructure or rate limits break |
 | `REDIS_URL` | no | — | Shared cache for rate limits across workers |
-| `THROTTLE_ANON_RATE` / `THROTTLE_USER_RATE` / `THROTTLE_AUTH_RATE` | no | `120/min` / `600/min` / `10/min` | Rate limits (`auth` = login and register) |
+| `THROTTLE_ANON_RATE` / `THROTTLE_USER_RATE` / `THROTTLE_AUTH_RATE` / `THROTTLE_PASSWORD_RESET_RATE` | no | `120/min` / `600/min` / `10/min` / `10/hour` | Rate limits (`auth` = login, register and setting a new password; `password_reset` = reset-email requests) |
 | `JWT_ACCESS_MINUTES` / `JWT_REFRESH_DAYS` | no | `15` / `7` | Token lifetimes |
 | `MAX_UPLOAD_MB` | no | `5` | Largest avatar/photo upload |
 | `USD_TO_THB_RATE` | no | `35.00` | Fixed MVP display-conversion rate |
@@ -226,3 +236,7 @@ example nginx `client_max_body_size 6m`). `manage.py check --deploy` should
 report no issues. Run `manage.py flushexpiredtokens` daily to prune the JWT
 blacklist. Uploaded media still needs durable object storage before photos
 can be served.
+
+Store `DJANGO_PASSWORD_PEPPER` in a secret manager and back it up separately from
+the database. Passwords are Argon2id with a per-user salt and this pepper; older
+PBKDF2 hashes are upgraded when each user next signs in.

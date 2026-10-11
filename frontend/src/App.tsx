@@ -10,8 +10,10 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { api, mapListing, mapUser, setTokens } from "./lib/api";
 import { useListings } from "./hooks/useListings";
+import { readResetLink } from "./lib/resetLink";
 
 
 function storedPreference<T extends string>(key: string, fallback: T): T {
@@ -23,7 +25,9 @@ export default function App() {
   const [lang, setLangState] = useState<AppLang>(() => storedPreference("pokefind.language", "th"));
   const [currency, setCurrencyState] = useState<Currency>(() => storedPreference("pokefind.currency", "THB"));
   const [theme, setThemeState] = useState<ThemePreference>(() => storedTheme());
-  const [currentPage, setCurrentPage] = useState<Page>("discover");
+  // A password-reset email opens the app with the token in the URL fragment (see backend/accounts/password_reset.py).
+  const [resetLink] = useState(() => readResetLink(window.location.hash));
+  const [currentPage, setCurrentPage] = useState<Page>(resetLink ? "resetPassword" : "discover");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -41,6 +45,11 @@ export default function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    // Drop the token from the address bar and the history entry as soon as it has been read.
+    if (resetLink) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [resetLink]);
 
   useEffect(() => {
     if (theme !== "system") return;
@@ -173,6 +182,9 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      case "resetPassword":
+        if (!resetLink) return null;
+        return <ResetPasswordPage lang={lang} link={resetLink} onDone={() => setCurrentPage("auth")} />;
       case "auth":
         return <AuthPage lang={lang} onAuth={handleAuth} error={authError} loading={authLoading} />;
       case "listing":
@@ -207,7 +219,7 @@ export default function App() {
     }
   };
 
-  const showNav = currentPage !== "auth" && currentPage !== "listing";
+  const showNav = currentPage !== "auth" && currentPage !== "listing" && currentPage !== "resetPassword";
   return (
     <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
       {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{actionError} · ✕</button>}

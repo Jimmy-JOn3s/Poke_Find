@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { AppLang, UserRole } from '../types';
 import { i18n } from '../i18n';
+import { api } from '../lib/api';
 
 interface Props {
   lang: AppLang;
@@ -25,6 +26,23 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const [frontUploaded, setFrontUploaded] = useState(false);
   const [backUploaded, setBackUploaded] = useState(false);
   const [verifySubmitted, setVerifySubmitted] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const sendReset = async () => {
+    setResetSending(true);
+    setResetError('');
+    try {
+      await api.requestPasswordReset(email);
+      setResetSent(true);
+    } catch (caught) {
+      setResetError(caught instanceof Error ? caught.message : 'Request failed');
+    } finally {
+      setResetSending(false);
+    }
+  };
 
   // Reveal demo accounts on a double-tap, or keyboard activation of the title.
   const toggleDemoAccounts = (keyboard: boolean) => {
@@ -139,6 +157,29 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               aria-label={t.password} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               placeholder={t.password} className={`${inputClass} mb-3 block`} />
+            {mode === 'signin' && (
+              <button type="button" onClick={() => { setForgotOpen(open => !open); setResetSent(false); setResetError(''); }}
+                aria-expanded={forgotOpen} className="block ml-auto -mt-1 mb-3 text-xs text-primary">
+                {t.forgotPassword}
+              </button>
+            )}
+            {mode === 'signin' && forgotOpen && (
+              <div className="mb-3 p-3 text-xs detail-stat">
+                {resetSent ? (
+                  <p className="text-success">✓ {t.resetLinkSent}</p>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground mb-2">{t.forgotPasswordHelp}</p>
+                    {resetError && <p className="text-danger mb-2">{resetError}</p>}
+                    <button type="button" disabled={resetSending || !email} onClick={() => void sendReset()}
+                      className="w-full py-2 text-xs font-bold btn-primary"
+                      style={{ borderRadius: 4, opacity: resetSending || !email ? 0.45 : 1 }}>
+                      {resetSending ? t.loading : t.sendResetLink}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             {error && <p className="text-xs mb-3 text-danger">{error}</p>}
 

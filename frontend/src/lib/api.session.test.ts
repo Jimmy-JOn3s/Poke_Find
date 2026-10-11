@@ -122,6 +122,22 @@ describe("session tokens", () => {
     expect(bearer(fetchMock.mock.calls[0][1])).toBeNull();
   });
 
+  it("password-reset calls never send a stored token", async () => {
+    setTokens({ access: "stale-access", refresh: "refresh-1" });
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => json(200, { detail: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await api.requestPasswordReset("ash@example.com");
+    await api.confirmPasswordReset("MQ", "token-1", "brand-new-pass-92");
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      `${API}/auth/password-reset/`, `${API}/auth/password-reset/confirm/`,
+    ]);
+    expect(fetchMock.mock.calls.map(([, init]) => bearer(init))).toEqual([null, null]);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      uid: "MQ", token: "token-1", new_password: "brand-new-pass-92",
+    });
+  });
+
   it("logout clears tokens and asks the server to blacklist the refresh token", async () => {
     setTokens({ access: "a", refresh: "r" });
     const fetchMock = vi.fn(async () => json(200, {}));

@@ -11,9 +11,10 @@ from messaging.models import Review
 from messaging.serializers import ReviewSerializer
 
 from .serializers import (
-    EmailOrUsernameTokenObtainPairSerializer, PublicUserProfileSerializer,
-    RegisterSerializer, UserSerializer,
+    EmailOrUsernameTokenObtainPairSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
+    PublicUserProfileSerializer, RegisterSerializer, UserSerializer,
 )
+from .password_reset import confirm_password_reset, request_password_reset
 
 
 User = get_user_model()
@@ -80,3 +81,31 @@ class UserReviewsView(generics.ListAPIView):
         return Review.objects.select_related(
             "reviewer", "reviewee", "deal__conversation__listing",
         ).filter(reviewee=user)
+
+
+RESET_REQUESTED = "If an account uses that email, we've sent a link to reset the password."
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = (permissions.AllowAny,)
+    # A stale token in the browser must not block account recovery.
+    authentication_classes = ()
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        request_password_reset(serializer.validated_data["email"])
+        return Response({"detail": RESET_REQUESTED})
+
+
+class PasswordResetConfirmView(AuthAttemptThrottleMixin, APIView):
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = ()
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        confirm_password_reset(**serializer.validated_data)
+        return Response({"detail": "Password updated. Sign in with your new password."})
