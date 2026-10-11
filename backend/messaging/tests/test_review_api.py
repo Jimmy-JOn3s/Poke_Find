@@ -78,7 +78,8 @@ class ReviewApiTests(ApiTestCase):
     def test_stranger_cannot_review(self):
         self.client.force_authenticate(self.stranger)
         response = self.client.post(f"/api/deals/{self.deal.id}/review/", {"rating": 1}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # 404, not 403: strangers shouldn't even learn that the deal exists.
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_profile_and_reviews_list(self):
         Review.objects.create(

@@ -58,6 +58,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = MessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         message = serializer.save(conversation=conversation, author=request.user)
+        # The inbox is ordered by updated_at, so a new message must move the thread to the top.
+        Conversation.objects.filter(pk=conversation.pk).update(updated_at=message.created_at)
         return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=("get", "post"))

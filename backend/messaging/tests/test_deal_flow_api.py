@@ -1,6 +1,8 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from common.testing import ApiTestCase
 
@@ -86,3 +88,11 @@ class DealFlowApiTests(ApiTestCase):
         self.client.force_authenticate(self.buyer)
         self.assertEqual(self.client.post(url, {"message_id": foreign_message.id}).status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.client.post(url, {}).status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_new_message_moves_conversation_to_the_top_of_the_inbox(self):
+        long_ago = timezone.now() - timedelta(days=30)
+        Conversation.objects.filter(pk=self.conversation.pk).update(updated_at=long_ago)
+        self.client.force_authenticate(self.buyer)
+        self.client.post(f"/api/conversations/{self.conversation.id}/messages/", {"body": "Still there?"}, format="json")
+        self.conversation.refresh_from_db()
+        self.assertGreater(self.conversation.updated_at, long_ago)
