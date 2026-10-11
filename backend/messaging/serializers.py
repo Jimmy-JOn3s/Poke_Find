@@ -110,10 +110,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "buyer", "seller", "created_at", "updated_at")
 
     def get_deal(self, obj):
-        try:
-            return DealSerializer(obj.deal, context=self.context).data
-        except Deal.DoesNotExist:
-            return None
+        deal = obj.live_deal()
+        return DealSerializer(deal, context=self.context).data if deal else None
 
     def get_listing(self, obj):
         return {"id": obj.listing_id, "product_name": obj.listing.product_name, "asking_price": str(obj.listing.asking_price), "currency": obj.listing.currency}

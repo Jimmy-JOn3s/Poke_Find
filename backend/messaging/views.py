@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied, ValidationError as DjangoValidationError
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -21,11 +21,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "post", "head", "options")
 
     def get_queryset(self):
-        return Conversation.objects.select_related(
-            "listing", "buyer", "seller", "deal__conversation__buyer", "deal__conversation__seller",
-        ).prefetch_related("deal__reviews").filter(
-            Q(buyer=self.request.user) | Q(seller=self.request.user)
-        )
+        deals = Deal.objects.select_related("conversation__buyer", "conversation__seller").prefetch_related("reviews")
+        return Conversation.objects.select_related("listing", "buyer", "seller").prefetch_related(
+            Prefetch("deals", queryset=deals),
+        ).filter(Q(buyer=self.request.user) | Q(seller=self.request.user))
 
     @action(detail=True, methods=("post",))
     def read(self, request, pk=None):

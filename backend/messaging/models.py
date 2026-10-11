@@ -21,6 +21,10 @@ class Conversation(models.Model):
     def has_participant(self, user):
         return user.is_authenticated and user.id in {self.buyer_id, self.seller_id}
 
+    def live_deal(self):
+        """The accepted or completed deal of this conversation; cancelled deals don't count."""
+        return next((deal for deal in self.deals.all() if deal.status != Deal.Status.CANCELLED), None)
+
 
 class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
@@ -58,7 +62,7 @@ class Deal(models.Model):
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
 
-    conversation = models.OneToOneField(Conversation, on_delete=models.CASCADE, related_name="deal")
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="deals")
     accepted_offer = models.OneToOneField(Offer, on_delete=models.PROTECT, related_name="deal")
     final_price = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=Listing.Currency.choices)
@@ -67,6 +71,16 @@ class Deal(models.Model):
     seller_confirmed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            # A cancelled deal frees the conversation for a new one; at most one may be open or done.
+            models.UniqueConstraint(
+                fields=("conversation",),
+                condition=models.Q(status__in=("accepted", "completed")),
+                name="one_live_deal_per_conversation",
+            ),
+        ]
 
 
 class Review(models.Model):
