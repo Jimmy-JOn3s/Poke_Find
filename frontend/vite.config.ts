@@ -9,6 +9,7 @@ import siteConfiguration from './.figma/make/site.json'
 export default defineConfig(({ command, mode }) => {
   // Every variable from the .env files and the shell, not just VITE_* ones.
   const env = loadEnv(mode, process.cwd(), '')
+  if (command === 'build') assertDeployableApiUrl(env.VITE_API_URL)
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
 
@@ -356,5 +357,16 @@ function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin
         }
       })
     },
+  }
+}
+
+/** Builds are deployed (Figma Make deploy and deploy-preview), so they must point at a reachable API. */
+function assertDeployableApiUrl(value: string | undefined): void {
+  if (!value?.trim()) {
+    throw new Error('VITE_API_URL must be set for builds (see frontend/.env.example)')
+  }
+  const host = new URL(value).hostname
+  if (['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(host)) {
+    throw new Error(`VITE_API_URL points at ${host}; builds are deployed, so use the real API URL`)
   }
 }

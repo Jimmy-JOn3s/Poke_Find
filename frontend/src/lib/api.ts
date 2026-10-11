@@ -1,8 +1,20 @@
 import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review, UserRole } from "../types";
 
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-const TOKEN_KEY = "pokefind.accessToken";
+const ACCESS_TOKEN_KEY = "pokefind.accessToken";
+const REFRESH_TOKEN_KEY = "pokefind.refreshToken";
+
+export function resolveApiBase(configured: string | undefined): string {
+  const value = configured?.trim();
+  if (!value) {
+    throw new Error("VITE_API_URL is not set. Copy frontend/.env.example to frontend/.env.development.local.");
+  }
+  return value.replace(/\/+$/, "");
+}
+
+function apiBase(): string {
+  return resolveApiBase(import.meta.env.VITE_API_URL);
+}
 
 export interface ApiUser {
   id: number;
@@ -155,22 +167,78 @@ export function mapReview(item: ApiReview): Review {
   };
 }
 
-function accessToken(): string | null {
-  return typeof localStorage === "undefined" ? null : localStorage.getItem(TOKEN_KEY);
+export interface AuthTokens {
+  access: string;
+  refresh: string;
 }
 
-export function setAccessToken(token: string | null): void {
+function readStorage(key: string): string | null {
+  return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+}
+
+export function setTokens(tokens: AuthTokens | null): void {
   if (typeof localStorage === "undefined") return;
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  if (tokens) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access);
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+// One refresh at a time per tab: the server rotates refresh tokens, so a second concurrent
+// refresh would present an already-blacklisted token and sign the user out.
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshTokens(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = runRefresh().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function runRefresh(): Promise<boolean> {
+  const refresh = readStorage(REFRESH_TOKEN_KEY);
+  if (!refresh) {
+    setTokens(null);
+    return false;
+  }
+  const response = await fetch(`${apiBase()}/auth/refresh/`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh }),
+  });
+  if (response.ok) {
+    const data = await response.json() as { access: string; refresh?: string };
+    setTokens({ access: data.access, refresh: data.refresh ?? refresh });
+    return true;
+  }
+  // Another tab may have rotated the refresh token while this request was in flight.
+  if (readStorage(REFRESH_TOKEN_KEY) !== refresh) return true;
+  // Only an explicit rejection ends the session; rate limits and server errors are retried later.
+  if (response.status === 400 || response.status === 401) setTokens(null);
+  return false;
+}
+
+function send(path: string, init: RequestInit, token: string | null): Promise<Response> {
   const headers = new Headers(init.headers);
   if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  const token = accessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  return fetch(`${apiBase()}${path}`, { ...init, headers });
+}
+
+// Credential endpoints never carry a session: a stale token would otherwise turn a wrong password
+// (401) into a refresh plus a second login attempt, doubling the attempts the rate limit counts.
+const CREDENTIAL_PATHS = new Set(["/auth/login/", "/auth/register/"]);
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = CREDENTIAL_PATHS.has(path) ? null : readStorage(ACCESS_TOKEN_KEY);
+  let response = await send(path, init, token);
+  if (response.status === 401 && token) {
+    const latest = readStorage(ACCESS_TOKEN_KEY);
+    const refreshed = latest && latest !== token ? true : await refreshTokens();
+    // Without a session, retry anonymously so public pages keep working.
+    response = await send(path, init, refreshed ? readStorage(ACCESS_TOKEN_KEY) : null);
+  }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.detail || Object.values(payload).flat().join(" ") || `Request failed (${response.status})`);
@@ -189,6 +257,15 @@ export const api = {
   },
   login(username: string, password: string): Promise<{ access: string; refresh: string }> {
     return request("/auth/login/", { method: "POST", body: JSON.stringify({ username, password }) });
+  },
+  async logout(): Promise<void> {
+    const refresh = readStorage(REFRESH_TOKEN_KEY);
+    setTokens(null);
+    if (!refresh) return;
+    // Best effort: the user is signed out locally even if the network call fails.
+    await fetch(`${apiBase()}/auth/logout/`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh }),
+    }).catch(() => undefined);
   },
   me(): Promise<ApiUser> { return request("/auth/me/"); },
   updateMe(payload: Partial<ApiUser>): Promise<ApiUser> {

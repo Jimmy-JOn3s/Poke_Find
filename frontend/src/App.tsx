@@ -10,7 +10,7 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
-import { api, mapListing, mapUser, setAccessToken } from "./lib/api";
+import { api, mapListing, mapUser, setTokens } from "./lib/api";
 import { useListings } from "./hooks/useListings";
 
 
@@ -56,7 +56,7 @@ export default function App() {
       setCurrentUser(mapped);
       if (mapped.preferredLanguage) setLangState(mapped.preferredLanguage);
       if (mapped.preferredCurrency) setCurrencyState(mapped.preferredCurrency);
-    }).catch(() => setAccessToken(null));
+    }).catch(() => undefined);
   }, []);
 
   const setLang = (next: AppLang) => {
@@ -87,11 +87,11 @@ export default function App() {
           username: `${usernameBase}-${Date.now().toString().slice(-5)}`, email, password,
           display_name: name, role, preferred_language: lang, preferred_currency: currency,
         });
-        setAccessToken(result.access);
+        setTokens({ access: result.access, refresh: result.refresh });
         setCurrentUser(mapUser(result.user));
       } else {
         const result = await api.login(email, password);
-        setAccessToken(result.access);
+        setTokens(result);
         setCurrentUser(mapUser(await api.me()));
       }
       setCurrentPage("discover");
@@ -104,7 +104,7 @@ export default function App() {
   };
 
   const handleSignOut = () => {
-    setAccessToken(null);
+    void api.logout();
     setCurrentUser(null);
     setCurrentPage("discover");
     void reload();
