@@ -233,7 +233,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                   <b className="text-primary">{formatMoney(Number(offer.amount), offer.currency, lang)}</b>
                 </div>
                 <p className="text-[10px] text-muted-foreground">{offer.proposer.display_name} · {offer.status}</p>
-                {offer.status === "pending" && active.seller.id === Number(currentUser?.id) && (
+                {offer.status === "pending" && offer.proposer.id !== Number(currentUser?.id) && (
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => void actOnOffer(offer, "accept")} className="btn-primary px-3 py-1 text-xs">{copy.accept}</button>
                     <button onClick={() => void actOnOffer(offer, "decline")} className="px-3 py-1 text-xs btn-danger-outline">{copy.decline}</button>

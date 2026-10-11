@@ -15,8 +15,8 @@ def transition_offer(offer: Offer, actor, action: str, amount: Decimal | None = 
         raise PermissionDenied("Only conversation participants may act on an offer")
     if offer.status != Offer.Status.PENDING:
         raise ValidationError("Offer is no longer pending")
-    if action in {"accept", "decline"} and actor.id != offer.conversation.seller_id:
-        raise PermissionDenied("Only the seller may accept or decline")
+    if offer.proposer_id == actor.id:
+        raise PermissionDenied("You cannot respond to your own offer")
     if action == "accept":
         offer.status = Offer.Status.ACCEPTED
         offer.save(update_fields=("status", "updated_at"))
