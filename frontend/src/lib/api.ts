@@ -307,6 +307,7 @@ export const api = {
     return request(`/offers/${id}/counter/`, { method: "POST", body: JSON.stringify({ amount }) });
   },
   confirmDeal(id: number): Promise<ApiDeal> { return request(`/deals/${id}/confirm-completion/`, { method: "POST" }); },
+  cancelDeal(id: number): Promise<ApiDeal> { return request(`/deals/${id}/cancel/`, { method: "POST" }); },
   submitReview(dealId: number, rating: number, comment: string): Promise<ApiReview> {
     return request(`/deals/${dealId}/review/`, { method: "POST", body: JSON.stringify({ rating, comment }) });
   },

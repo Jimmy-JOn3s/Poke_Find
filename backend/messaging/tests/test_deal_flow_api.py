@@ -43,6 +43,7 @@ class DealFlowApiTests(ApiTestCase):
         self.assertTrue(Deal.objects.filter(accepted_offer_id=created.data["id"]).exists())
 
     def test_both_parties_complete_deal_and_persist_final_price(self):
+        Listing.objects.filter(pk=self.listing.pk).update(status=Listing.Status.RESERVED)
         offer = Offer.objects.create(
             conversation=self.conversation, proposer=self.buyer, amount=Decimal("40.00"), currency="USD", status="accepted"
         )

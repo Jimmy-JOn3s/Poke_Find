@@ -12,7 +12,17 @@ from .serializers import (
     ConversationSerializer, DealSerializer, MessageSerializer, OfferSerializer,
     ReadConversationSerializer, ReviewCreateSerializer, ReviewSerializer,
 )
-from .services import confirm_deal, create_review, transition_offer
+from .services import cancel_deal, confirm_deal, create_review, place_offer, transition_offer
+
+
+def call_service(func, *args):
+    """Run a service function and turn Django's errors into DRF's 403/400 responses."""
+    try:
+        return func(*args)
+    except DjangoPermissionDenied as exc:
+        raise PermissionDenied(str(exc)) from exc
+    except DjangoValidationError as exc:
+        raise ValidationError(exc.messages) from exc
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -59,7 +69,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
             return Response(OfferSerializer(conversation.offers.select_related("proposer"), many=True).data)
         serializer = OfferSerializer(data=request.data, context={"conversation": conversation})
         serializer.is_valid(raise_exception=True)
-        offer = serializer.save(conversation=conversation, proposer=request.user)
+        offer = call_service(
+            place_offer, conversation, request.user,
+            serializer.validated_data["amount"], serializer.validated_data["currency"],
+        )
         return Response(OfferSerializer(offer).data, status=status.HTTP_201_CREATED)
 
 
@@ -72,22 +85,17 @@ class OfferViewSet(viewsets.ReadOnlyModelViewSet):
             Q(conversation__buyer=self.request.user) | Q(conversation__seller=self.request.user)
         )
 
-    def _transition(self, request, action_name, pk, amount=None):
-        try:
-            offer = transition_offer(self.get_object(), request.user, action_name, amount)
-        except DjangoPermissionDenied as exc:
-            raise PermissionDenied(str(exc)) from exc
-        except DjangoValidationError as exc:
-            raise ValidationError(exc.messages) from exc
+    def _transition(self, request, action_name, amount=None):
+        offer = call_service(transition_offer, self.get_object(), request.user, action_name, amount)
         return Response(OfferSerializer(offer).data)
 
     @action(detail=True, methods=("post",))
     def accept(self, request, pk=None):
-        return self._transition(request, "accept", pk)
+        return self._transition(request, "accept")
 
     @action(detail=True, methods=("post",))
     def decline(self, request, pk=None):
-        return self._transition(request, "decline", pk)
+        return self._transition(request, "decline")
 
     @action(detail=True, methods=("post",))
     def counter(self, request, pk=None):
@@ -95,7 +103,7 @@ class OfferViewSet(viewsets.ReadOnlyModelViewSet):
             amount = Decimal(str(request.data.get("amount")))
         except (InvalidOperation, TypeError):
             raise ValidationError({"amount": "Enter a valid amount"})
-        return self._transition(request, "counter", pk, amount)
+        return self._transition(request, "counter", amount)
 
 
 class DealViewSet(viewsets.ReadOnlyModelViewSet):
@@ -111,10 +119,12 @@ class DealViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=("post",), url_path="confirm-completion")
     def confirm_completion(self, request, pk=None):
-        try:
-            deal = confirm_deal(self.get_object(), request.user)
-        except DjangoPermissionDenied as exc:
-            raise PermissionDenied(str(exc)) from exc
+        deal = call_service(confirm_deal, self.get_object(), request.user)
+        return Response(DealSerializer(deal, context={"request": request}).data)
+
+    @action(detail=True, methods=("post",))
+    def cancel(self, request, pk=None):
+        deal = call_service(cancel_deal, self.get_object(), request.user)
         return Response(DealSerializer(deal, context={"request": request}).data)
 
     @action(detail=True, methods=("post",), url_path="review")
@@ -122,17 +132,10 @@ class DealViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = ReviewCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         deal = self.get_object()
-        try:
-            created = create_review(
-                deal,
-                request.user,
-                serializer.validated_data["rating"],
-                serializer.validated_data.get("comment", ""),
-            )
-        except DjangoPermissionDenied as exc:
-            raise PermissionDenied(str(exc)) from exc
-        except DjangoValidationError as exc:
-            raise ValidationError(exc.messages) from exc
+        created = call_service(
+            create_review, deal, request.user,
+            serializer.validated_data["rating"], serializer.validated_data.get("comment", ""),
+        )
         review = deal.reviews.select_related(
             "reviewer", "reviewee", "deal__conversation__listing",
         ).get(pk=created.pk)
@@ -140,4 +143,3 @@ class DealViewSet(viewsets.ReadOnlyModelViewSet):
             ReviewSerializer(review, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
-

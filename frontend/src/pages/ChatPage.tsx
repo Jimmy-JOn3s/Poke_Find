@@ -20,11 +20,13 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     title: "ข้อความ", empty: "ยังไม่มีการสนทนา", signIn: "เข้าสู่ระบบเพื่อดูข้อความ",
     type: "พิมพ์ข้อความ...", send: "ส่ง", offer: "เสนอราคา", accept: "ยอมรับ",
     decline: "ปฏิเสธ", complete: "ยืนยันว่าซื้อขายสำเร็จ", retry: "ลองอีกครั้ง",
+    cancelDeal: "ยกเลิกดีล",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
     type: "Type a message...", send: "Send", offer: "Make offer", accept: "Accept",
     decline: "Decline", complete: "Confirm completed trade", retry: "Try again",
+    cancelDeal: "Cancel deal",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -66,6 +68,17 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
       const deal = await api.confirmDeal(active.deal.id);
       await loadThreads();
       maybePromptReview(deal);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Request failed");
+    }
+  };
+
+  const cancelDeal = async () => {
+    if (!active?.deal) return;
+    try {
+      await api.cancelDeal(active.deal.id);
+      await loadThreads();
+      setOffers(await api.offers(active.id));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
     }
@@ -262,6 +275,11 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                 className="w-full py-2 text-xs text-success"
                 style={{ border: "1px solid color-mix(in srgb, var(--color-success) 40%, transparent)" }}>
                 {copy.complete}
+              </button>
+            )}
+            {active.deal && active.deal.status === "accepted" && !active.deal.buyer_confirmed && !active.deal.seller_confirmed && (
+              <button onClick={() => void cancelDeal()} className="w-full py-2 text-xs btn-danger-outline">
+                {copy.cancelDeal}
               </button>
             )}
             {active.deal && active.deal.status === "completed" && active.deal.reviewer_has_reviewed !== true && active.deal.counterparty_id && (
