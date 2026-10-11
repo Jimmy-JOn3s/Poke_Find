@@ -1,4 +1,4 @@
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Q
@@ -12,6 +12,9 @@ from .permissions import IsOwnerOrReadOnly
 from .serializers import ListingSerializer
 
 
+PRICE_CEILING = Decimal("10000000000")
+
+
 def _price_param(request, name):
     raw = request.query_params.get(name)
     if not raw:
@@ -22,7 +25,11 @@ def _price_param(request, name):
         value = None
     if value is None or not value.is_finite() or value < 0:
         raise ValidationError({name: "Enter a valid non-negative number."})
-    return value
+    # Prices are numeric(12, 2), so nothing costs PRICE_CEILING or more. Clamp bigger bounds to it and round
+    # extra decimals the inclusive way: PostgreSQL rejects huge or tiny exponents ("numeric overflow").
+    if value >= PRICE_CEILING:
+        return PRICE_CEILING
+    return value.quantize(Decimal("0.01"), rounding=ROUND_FLOOR if name == "min_price" else ROUND_CEILING)
 
 
 class ListingViewSet(viewsets.ModelViewSet):

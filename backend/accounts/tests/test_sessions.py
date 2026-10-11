@@ -39,3 +39,19 @@ class SessionSecurityTests(ApiTestCase):
         refresh = self.login().data["refresh"]
         self.assertEqual(self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json").status_code, 200)
         self.assertEqual(self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json").status_code, 401)
+
+    def test_a_password_change_ends_every_existing_session(self):
+        tokens = self.login().data
+        user = User.objects.get(username="ash")
+        user.set_password("a-different-pass-55")
+        user.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        self.assertEqual(self.client.get("/api/auth/me/").status_code, 401)
+        self.client.credentials()
+        refreshed = self.client.post("/api/auth/refresh/", {"refresh": tokens["refresh"]}, format="json")
+        self.assertEqual(refreshed.status_code, 401)
+
+    def test_refresh_for_a_deleted_account_is_rejected(self):
+        refresh = self.login().data["refresh"]
+        User.objects.filter(username="ash").delete()
+        self.assertEqual(self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json").status_code, 401)

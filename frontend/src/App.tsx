@@ -26,7 +26,7 @@ export default function App() {
   const [currency, setCurrencyState] = useState<Currency>(() => storedPreference("pokefind.currency", "THB"));
   const [theme, setThemeState] = useState<ThemePreference>(() => storedTheme());
   // A password-reset email opens the app with the token in the URL fragment (see backend/accounts/password_reset.py).
-  const [resetLink] = useState(() => readResetLink(window.location.hash));
+  const [resetLink, setResetLink] = useState(() => readResetLink(window.location.hash));
   const [currentPage, setCurrentPage] = useState<Page>(resetLink ? "resetPassword" : "discover");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -47,9 +47,20 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    // Drop the token from the address bar and the history entry as soon as it has been read.
-    if (resetLink) window.history.replaceState(null, "", window.location.pathname + window.location.search);
-  }, [resetLink]);
+    // Also handle a reset link opened in a tab that already shows the app: only the fragment changes, so
+    // the page doesn't reload.
+    const openResetLink = () => {
+      const link = readResetLink(window.location.hash);
+      if (!link) return;
+      setResetLink(link);
+      setCurrentPage("resetPassword");
+      // Drop the token from the address bar and the history entry as soon as it has been read.
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    openResetLink();
+    window.addEventListener("hashchange", openResetLink);
+    return () => window.removeEventListener("hashchange", openResetLink);
+  }, []);
 
   useEffect(() => {
     if (theme !== "system") return;

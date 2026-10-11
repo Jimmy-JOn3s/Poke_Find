@@ -5,7 +5,11 @@ from django.core.validators import validate_image_file_extension
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, Q
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.utils import get_md5_hash_password
 
 from common.validators import validate_upload_size
 from messaging.models import Deal, Review
@@ -152,3 +156,18 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField(max_length=64)
     token = serializers.CharField(max_length=128)
     new_password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
+
+
+class RevocationCheckingRefreshSerializer(TokenRefreshSerializer):
+    """Refuses refresh tokens issued before the account's password last changed, or for deleted accounts.
+
+    SimpleJWT checks the password fingerprint only when an access token is used, so without this a stale
+    refresh token would keep minting access tokens that are rejected right away.
+    """
+
+    def validate(self, attrs):
+        token = RefreshToken(attrs["refresh"])
+        user = User.objects.filter(**{jwt_settings.USER_ID_FIELD: token.get(jwt_settings.USER_ID_CLAIM)}).first()
+        if user is None or token.get(jwt_settings.REVOKE_TOKEN_CLAIM) != get_md5_hash_password(user.password):
+            raise InvalidToken("This session has ended. Sign in again.")
+        return super().validate(attrs)

@@ -141,7 +141,7 @@ message naming any missing required variable.
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | yes | — | Signs sessions and JWTs |
-| `DJANGO_PASSWORD_PEPPER` | yes | — | Secret mixed into every password hash (≥ 32 chars). Never change or lose it: every user would have to reset |
+| `DJANGO_PASSWORD_PEPPER` | yes | — | Secret mixed into every password hash (≥ 32 random chars, e.g. `secrets.token_urlsafe(48)`). Never change or lose it: every user would have to reset |
 | `DJANGO_DEBUG` | no | `0` | `1` for local development only |
 | `DJANGO_ALLOWED_HOSTS` | yes | — | Accepted host headers |
 | `CORS_ALLOWED_ORIGINS` | yes | — | Allowed frontend origins |
@@ -240,3 +240,10 @@ can be served.
 Store `DJANGO_PASSWORD_PEPPER` in a secret manager and back it up separately from
 the database. Passwords are Argon2id with a per-user salt and this pepper; older
 PBKDF2 hashes are upgraded when each user next signs in.
+
+Tokens carry a fingerprint of the password hash, so a password change or reset
+ends every session at once. Deploying this release therefore signs every user
+out once, and the PBKDF2 upgrade signs out that user's other devices once.
+
+Keep `/admin/` off the public internet (proxy IP allowlist or VPN). Its login
+is rate-limited like the API login, but it guards the most powerful accounts.

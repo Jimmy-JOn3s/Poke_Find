@@ -15,7 +15,7 @@ PROBE = (
 )
 BASE = {
     "DJANGO_SECRET_KEY": "test-only-" + "x" * 50,
-    "DJANGO_PASSWORD_PEPPER": "test-pepper-" + "p" * 40,
+    "DJANGO_PASSWORD_PEPPER": "test-pepper-0123456789-abcdefghijklmnopqrstuvwxyz",
     "DJANGO_ALLOWED_HOSTS": "api.example.com",
     "CORS_ALLOWED_ORIGINS": "https://app.example.com",
     "FRONTEND_URL": "https://app.example.com",
@@ -72,7 +72,8 @@ class SettingsFromEnvironmentTests(SimpleTestCase):
         self.assertEqual(result.stdout.split()[:2], ["True", "django.db.backends.sqlite3"])
 
     def test_password_pepper_is_required_and_long(self):
-        for variables in (without("DJANGO_PASSWORD_PEPPER"), {**BASE, "DJANGO_PASSWORD_PEPPER": "too-short"}):
+        for pepper in (None, "too-short", "a" * 40):
+            variables = without("DJANGO_PASSWORD_PEPPER") if pepper is None else {**BASE, "DJANGO_PASSWORD_PEPPER": pepper}
             result = load_settings(**variables, DJANGO_DEBUG="1")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("DJANGO_PASSWORD_PEPPER", result.stderr)

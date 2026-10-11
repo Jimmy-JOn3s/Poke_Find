@@ -83,6 +83,9 @@ def confirm_password_reset(uid: str, token: str, new_password: str) -> None:
         raise ValidationError({"new_password": list(exc.messages)}) from exc
     user.set_password(new_password)
     user.save(update_fields=["password"])
-    # Sign out every device: refresh tokens issued before the reset can't mint new access tokens.
-    for outstanding in OutstandingToken.objects.filter(user=user):
-        BlacklistedToken.objects.get_or_create(token=outstanding)
+    # Sign out every device. The password fingerprint in each token already ends them (CHECK_REVOKE_TOKEN);
+    # blacklisting as well keeps them dead even if that setting is ever turned off.
+    open_tokens = OutstandingToken.objects.filter(user=user, blacklistedtoken__isnull=True)
+    BlacklistedToken.objects.bulk_create(
+        [BlacklistedToken(token=token) for token in open_tokens], ignore_conflicts=True,
+    )

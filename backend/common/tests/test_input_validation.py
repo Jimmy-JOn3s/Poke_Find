@@ -1,6 +1,7 @@
 import io
 import tempfile
 from decimal import Decimal
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,6 +10,7 @@ from PIL import Image
 
 from common.testing import ApiTestCase
 from marketplace.models import Listing
+from marketplace.views import _price_param
 from messaging.models import Conversation, Offer
 
 
@@ -36,6 +38,21 @@ class InputValidationTests(ApiTestCase):
         for query in ("min_price=abc", "max_price=NaN", "min_price=-1", "max_price=Infinity"):
             self.assertEqual(self.client.get(f"/api/listings/?{query}").status_code, 400, query)
         self.assertEqual(self.client.get("/api/listings/?min_price=10&max_price=60").status_code, 200)
+
+    def test_price_filters_are_clamped_to_what_the_price_column_can_hold(self):
+        # PostgreSQL rejects comparisons with numbers like 1e999999 or 1e-20000 ("numeric overflow"); SQLite
+        # doesn't, so check the parsed values directly.
+        expected = {
+            ("min_price", "1e999999"): "10000000000", ("max_price", "1e131072"): "10000000000",
+            ("max_price", "999999999999.99"): "10000000000", ("min_price", "1e-20000"): "0.00",
+            ("min_price", "0.019"): "0.01", ("max_price", "0.011"): "0.02", ("max_price", "1E+3"): "1000.00",
+        }
+        for (name, raw), value in expected.items():
+            parsed = _price_param(SimpleNamespace(query_params={name: raw}), name)
+            self.assertEqual(parsed, Decimal(value), raw)
+            self.assertGreaterEqual(parsed.as_tuple().exponent, -2, raw)
+        both = self.client.get("/api/listings/?min_price=1e-20000&max_price=1e999999")
+        self.assertEqual((both.status_code, len(both.data["results"])), (200, 1))
 
     def test_zero_offer_is_rejected(self):
         self.client.force_authenticate(self.buyer)

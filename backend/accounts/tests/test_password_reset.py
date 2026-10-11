@@ -129,3 +129,12 @@ class PasswordResetTests(ApiTestCase):
         statuses = [self.request_reset(f"user{i}@example.com").status_code for i in range(11)]
         self.assertEqual(statuses[:10], [200] * 10)
         self.assertEqual(statuses[10], 429)
+
+    def test_signing_in_invalidates_an_earlier_reset_link(self):
+        self.request_reset()
+        uid, token = self.link_from_email()
+        login = self.client.post(
+            "/api/auth/login/", {"username": "misty@example.com", "password": OLD_PASSWORD}, format="json",
+        )
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(self.confirm(uid, token).status_code, 400)

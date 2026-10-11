@@ -91,8 +91,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Passwords: Argon2id with Django's per-user salt plus a secret pepper kept outside the database.
 PASSWORD_PEPPER = env("DJANGO_PASSWORD_PEPPER")
-if len(PASSWORD_PEPPER) < 32:
-    raise ImproperlyConfigured("DJANGO_PASSWORD_PEPPER must be at least 32 characters (see backend/.env.example).")
+# It can never change, so refuse obviously weak values such as one repeated character.
+if len(PASSWORD_PEPPER) < 32 or len(set(PASSWORD_PEPPER)) < 16:
+    raise ImproperlyConfigured(
+        "DJANGO_PASSWORD_PEPPER must be at least 32 random characters (see backend/.env.example)."
+    )
 PASSWORD_HASHERS = [
     "accounts.hashers.PepperedArgon2PasswordHasher",
     # Only verifies hashes made before the switch; Django re-hashes them with the pepper at the next login.
@@ -158,6 +161,12 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "7"))),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    # Tokens carry a fingerprint of the password hash, so changing the password (e.g. a reset) ends every
+    # session at once, including refresh tokens minted while the reset was running.
+    "CHECK_REVOKE_TOKEN": True,
+    "TOKEN_REFRESH_SERIALIZER": "accounts.serializers.RevocationCheckingRefreshSerializer",
+    # Reset links are bound to last_login, so signing in invalidates any reset link sent earlier.
+    "UPDATE_LAST_LOGIN": True,
 }
 if os.getenv("REDIS_URL"):
     # Share rate-limit counters across worker processes.
