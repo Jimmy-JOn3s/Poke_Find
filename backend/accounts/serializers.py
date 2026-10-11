@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import validate_image_file_extension
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, Q
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from common.validators import validate_upload_size
 from messaging.models import Deal, Review
 
 
@@ -34,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             "bio", "is_verified_seller", "date_joined",
         )
         read_only_fields = ("id", "username", "email", "is_verified_seller", "date_joined")
+        extra_kwargs = {"avatar": {"validators": [validate_image_file_extension, validate_upload_size]}}
 
 
 class PublicUserSerializer(serializers.ModelSerializer):

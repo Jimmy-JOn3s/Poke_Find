@@ -1,7 +1,9 @@
+from django.core.validators import validate_image_file_extension
 from django.db import transaction
 from rest_framework import serializers
 
 from accounts.serializers import PublicUserSerializer
+from common.validators import validate_upload_size
 from .models import Listing
 
 
@@ -23,6 +25,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "quantity", "description", "image_url", "photo", "status", "is_saved", "created_at", "updated_at",
         )
         read_only_fields = ("id", "seller", "is_saved", "created_at", "updated_at")
+        extra_kwargs = {"photo": {"validators": [validate_image_file_extension, validate_upload_size]}}
 
     def get_is_saved(self, obj):
         request = self.context.get("request")

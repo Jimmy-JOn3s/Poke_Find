@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
@@ -8,6 +10,19 @@ from rest_framework.response import Response
 from .models import Listing, SavedListing
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ListingSerializer
+
+
+def _price_param(request, name):
+    raw = request.query_params.get(name)
+    if not raw:
+        return None
+    try:
+        value = Decimal(raw)
+    except InvalidOperation:
+        value = None
+    if value is None or not value.is_finite() or value < 0:
+        raise ValidationError({name: "Enter a valid non-negative number."})
+    return value
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -31,9 +46,9 @@ class ListingViewSet(viewsets.ModelViewSet):
             value = self.request.query_params.get(field)
             if value:
                 queryset = queryset.filter(**{field: value})
-        if minimum := self.request.query_params.get("min_price"):
+        if (minimum := _price_param(self.request, "min_price")) is not None:
             queryset = queryset.filter(asking_price__gte=minimum)
-        if maximum := self.request.query_params.get("max_price"):
+        if (maximum := _price_param(self.request, "max_price")) is not None:
             queryset = queryset.filter(asking_price__lte=maximum)
         return queryset
 

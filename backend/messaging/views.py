@@ -1,5 +1,3 @@
-from decimal import Decimal, InvalidOperation
-
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied, ValidationError as DjangoValidationError
 from django.db.models import Prefetch, Q
 from rest_framework import permissions, status, viewsets
@@ -9,7 +7,7 @@ from rest_framework.response import Response
 
 from .models import Conversation, Deal, Offer
 from .serializers import (
-    ConversationSerializer, DealSerializer, MessageSerializer, OfferSerializer,
+    ConversationSerializer, CounterOfferSerializer, DealSerializer, MessageSerializer, OfferSerializer,
     ReadConversationSerializer, ReviewCreateSerializer, ReviewSerializer,
 )
 from .services import cancel_deal, confirm_deal, create_review, place_offer, transition_offer
@@ -99,11 +97,9 @@ class OfferViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=("post",))
     def counter(self, request, pk=None):
-        try:
-            amount = Decimal(str(request.data.get("amount")))
-        except (InvalidOperation, TypeError):
-            raise ValidationError({"amount": "Enter a valid amount"})
-        return self._transition(request, "counter", amount)
+        serializer = CounterOfferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return self._transition(request, "counter", serializer.validated_data["amount"])
 
 
 class DealViewSet(viewsets.ReadOnlyModelViewSet):

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from accounts.serializers import PublicUserSerializer
@@ -16,6 +18,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class OfferSerializer(serializers.ModelSerializer):
     proposer = PublicUserSerializer(read_only=True)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
 
     class Meta:
         model = Offer
@@ -46,6 +49,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ReviewCreateSerializer(serializers.Serializer):
     rating = serializers.IntegerField(min_value=1, max_value=5)
     comment = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+
+
+class CounterOfferSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
 
 
 class DealSerializer(serializers.ModelSerializer):
