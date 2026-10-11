@@ -41,7 +41,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
     setStep(1);
     setMagicSent(false);
     setEmail(`${account}@pokefind.local`);
-    setPassword('PokeFind123!');
+    setPassword(__DEMO_PASSWORD__);
   };
 
   const totalSteps = mode === 'signup' ? 3 : 1;

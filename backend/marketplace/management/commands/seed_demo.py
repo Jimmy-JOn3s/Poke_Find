@@ -1,7 +1,9 @@
+import os
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from marketplace.models import Listing, SavedListing
@@ -28,6 +30,13 @@ class Command(BaseCommand):
     help = "Create deterministic PokeFind demo accounts and marketplace data"
 
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                "seed_demo overwrites demo accounts and deletes listings; it only runs with DJANGO_DEBUG=1."
+            )
+        password = os.getenv("DEMO_SEED_PASSWORD", "")
+        if not password:
+            raise CommandError("Set DEMO_SEED_PASSWORD to the password the demo accounts should use.")
         seller, _ = User.objects.update_or_create(
             username="demo-seller",
             defaults={
@@ -36,7 +45,7 @@ class Command(BaseCommand):
                 "is_verified_seller": True, "location": "Bangkok",
             },
         )
-        seller.set_password("PokeFind123!")
+        seller.set_password(password)
         seller.save()
         buyer, _ = User.objects.update_or_create(
             username="demo-buyer",
@@ -46,7 +55,7 @@ class Command(BaseCommand):
                 "location": "Chiang Mai",
             },
         )
-        buyer.set_password("PokeFind123!")
+        buyer.set_password(password)
         buyer.save()
 
         buyer_two, _ = User.objects.update_or_create(
@@ -57,7 +66,7 @@ class Command(BaseCommand):
                 "location": "Bangkok",
             },
         )
-        buyer_two.set_password("PokeFind123!")
+        buyer_two.set_password(password)
         buyer_two.save()
 
         # Card images from TCGdex (https://tcgdex.dev). Thai-print SV2a cards prefer th scans when available.
@@ -397,7 +406,7 @@ class Command(BaseCommand):
                 "location": "Bangkok",
             },
         )
-        trader_one.set_password("PokeFind123!")
+        trader_one.set_password(password)
         trader_one.save()
         trader_two, _ = User.objects.update_or_create(
             username="demo-trader2",
@@ -407,7 +416,7 @@ class Command(BaseCommand):
                 "location": "Phuket",
             },
         )
-        trader_two.set_password("PokeFind123!")
+        trader_two.set_password(password)
         trader_two.save()
 
         review_count = self._seed_reviews(seller, buyer, trader_one, trader_two, listings)
