@@ -1,4 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, Q
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -91,6 +94,7 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    email = serializers.EmailField()
 
     class Meta:
         model = User
@@ -99,8 +103,32 @@ class RegisterSerializer(serializers.ModelSerializer):
             "preferred_language", "preferred_currency",
         )
 
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return email
+
+    def validate(self, attrs):
+        candidate = User(
+            username=attrs.get("username", ""), email=attrs.get("email", ""),
+            display_name=attrs.get("display_name", ""),
+        )
+        try:
+            validate_password(attrs["password"], user=candidate)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+        return attrs
+
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        # Two sign-ups can pass validation at the same moment; the database constraint decides.
+        try:
+            with transaction.atomic():
+                return User.objects.create_user(**validated_data)
+        except IntegrityError as exc:
+            raise serializers.ValidationError(
+                {"detail": "An account with this username or email already exists."}
+            ) from exc
 
 
 class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
