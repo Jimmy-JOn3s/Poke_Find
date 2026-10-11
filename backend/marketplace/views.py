@@ -1,6 +1,8 @@
+from django.db import transaction
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .models import Listing, SavedListing
@@ -37,6 +39,15 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
+
+    def perform_destroy(self, instance):
+        with transaction.atomic():
+            # Same lock order as the deal flow (listing first), so an offer can't be accepted between the
+            # check and the delete, and the two can't deadlock.
+            listing = Listing.objects.select_for_update().get(pk=instance.pk)
+            if listing.conversations.filter(deals__isnull=False).exists():
+                raise ValidationError("This listing has deals and can't be deleted. Hide it instead.")
+            listing.delete()
 
     @action(detail=True, methods=("post", "delete"), permission_classes=(permissions.IsAuthenticated,))
     def save(self, request, pk=None):

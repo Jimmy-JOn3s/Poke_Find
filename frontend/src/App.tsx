@@ -130,14 +130,15 @@ export default function App() {
       product_name: data.productName, set_name: data.set, set_code: data.setCode,
       card_number: data.cardNumber, condition: data.condition, card_language: data.language,
       rarity: data.rarity || "rare", asking_price: String(data.listedPrice), currency: data.currency || currency,
-      quantity: data.quantity || 1, description: data.description || "", status: "active",
+      quantity: data.quantity || 1, description: data.description || "",
     };
     try {
       if (editListing) {
+        // Edits never send status: once a card is reserved or sold, the deal flow owns it.
         const updated = mapListing(await api.updateListing(editListing.id, payload));
         setListings(current => current.map(item => item.id === updated.id ? updated : item));
       } else {
-        await create(payload);
+        await create({ ...payload, status: "active" });
       }
       setShowCreateListing(false);
       setEditListing(undefined);
