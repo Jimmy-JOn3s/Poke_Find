@@ -102,6 +102,8 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT_MINUTES", "60")) * 60
+MAGIC_LINK_TIMEOUT = int(os.getenv("MAGIC_LINK_TIMEOUT_MINUTES", "15")) * 60
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
 
 # Public address of the web app; password-reset emails link here.
 FRONTEND_URL = env("FRONTEND_URL").rstrip("/")
@@ -118,12 +120,17 @@ if os.getenv("EMAIL_HOST"):
     EMAIL_USE_TLS = not EMAIL_USE_SSL and os.getenv("EMAIL_USE_TLS", "1") == "1"
     EMAIL_TIMEOUT = 10
     DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+elif RESEND_API_KEY:
+    # Transactional email goes through Resend; Django's backend is only a dev fallback.
+    DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.dummy.EmailBackend"
 elif DEBUG:
     # Local development prints emails, including reset links, to the runserver console.
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "PokeFind <no-reply@localhost>")
 else:
     raise ImproperlyConfigured(
-        "Set EMAIL_HOST and DEFAULT_FROM_EMAIL: production must be able to send password-reset emails."
+        "Set RESEND_API_KEY or EMAIL_HOST and DEFAULT_FROM_EMAIL: production must be able to send email."
     )
 
 LANGUAGE_CODE = "en-us"
@@ -151,6 +158,7 @@ REST_FRAMEWORK = {
         "user": os.getenv("THROTTLE_USER_RATE", "600/min"),
         "auth": os.getenv("THROTTLE_AUTH_RATE", "10/min"),
         "password_reset": os.getenv("THROTTLE_PASSWORD_RESET_RATE", "10/hour"),
+        "magic_link": os.getenv("THROTTLE_MAGIC_LINK_RATE", "10/hour"),
     },
     # Number of proxies in front of Django that append to X-Forwarded-For. DRF's default (None)
     # would trust whatever X-Forwarded-For the client sends, letting attackers dodge rate limits.

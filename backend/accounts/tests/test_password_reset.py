@@ -60,14 +60,20 @@ class PasswordResetTests(ApiTestCase):
         self.request_reset()
         self.assertEqual(len(mail.outbox), 1)
 
-    def test_a_failed_send_gives_the_same_answer_and_can_be_retried(self):
-        known = self.request_reset("nobody@example.com").data
-        with mock.patch("accounts.password_reset.send_mail", side_effect=OSError("SMTP down")), \
-                self.assertLogs("accounts.password_reset", "ERROR"):
+    def test_a_failed_send_returns_an_error_and_can_be_retried(self):
+        with mock.patch("accounts.password_reset.send_transactional_email", side_effect=OSError("SMTP down")), \
+                self.assertLogs("common.transactional_email", "ERROR"):
             failed = self.request_reset()
-        self.assertEqual((failed.status_code, failed.data), (200, known))
+        self.assertEqual(failed.status_code, 503)
+        self.assertEqual(failed.data["code"], "email_delivery_failed")
         self.request_reset()
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_a_failed_send_for_an_unknown_email_still_looks_successful(self):
+        known = self.request_reset("nobody@example.com").data
+        with mock.patch("accounts.password_reset.send_transactional_email", side_effect=OSError("SMTP down")):
+            failed = self.request_reset("nobody@example.com")
+        self.assertEqual((failed.status_code, failed.data), (200, known))
 
     def test_reset_changes_the_password(self):
         self.request_reset()

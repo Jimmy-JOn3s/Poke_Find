@@ -7,7 +7,7 @@ from django.test import SimpleTestCase
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
-CONFIG_PREFIXES = ("DJANGO_", "POSTGRES_", "CORS_", "EMAIL_", "DEFAULT_FROM_EMAIL", "FRONTEND_URL", "REDIS_URL")
+CONFIG_PREFIXES = ("DJANGO_", "POSTGRES_", "CORS_", "EMAIL_", "DEFAULT_FROM_EMAIL", "FRONTEND_URL", "REDIS_URL", "RESEND_")
 PROBE = (
     "import config.settings as s; "
     "print(s.DEBUG, s.DATABASES['default']['ENGINE'], "
@@ -89,7 +89,16 @@ class SettingsFromEnvironmentTests(SimpleTestCase):
     def test_production_requires_an_email_server(self):
         result = load_settings(**BASE, **POSTGRES)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("EMAIL_HOST", result.stderr)
+        self.assertIn("RESEND_API_KEY", result.stderr)
+
+    def test_production_accepts_resend_without_smtp(self):
+        result = load_settings(
+            **BASE,
+            **POSTGRES,
+            RESEND_API_KEY="re_test",
+            DEFAULT_FROM_EMAIL="PokeFind <no-reply@example.com>",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_smtp_requires_a_from_address(self):
         result = load_settings(**BASE, EMAIL_HOST="smtp.example.com", DJANGO_DEBUG="1")
