@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AppLang, CardCondition, CardLanguage, Currency, Listing, UserRole } from '../types';
+import CardArt from './CardArt';
 import { i18n } from '../i18n';
 import { SETS } from '../mockData';
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 interface Props {
   lang: AppLang;
   onClose: () => void;
-  onSubmit: (listing: Partial<Listing>) => void;
+  onSubmit: (listing: Partial<Listing>, photoFile?: File | null) => void;
   editListing?: Listing;
   sellerRole: UserRole;
 }
@@ -42,8 +46,40 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
   const [quantity, setQuantity] = useState(editListing?.quantity?.toString() || '1');
   const [typeIcon, setTypeIcon] = useState(editListing?.typeIcon || '✨');
   const [gradIdx, setGradIdx] = useState(0);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectPreviewUrl = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (objectPreviewUrl) URL.revokeObjectURL(objectPreviewUrl);
+    };
+  }, [objectPreviewUrl]);
+
+  const previewImageUrl = objectPreviewUrl || (photoFile ? null : editListing?.imageUrl);
 
   const [gradientFrom, gradientTo] = editListing ? [editListing.gradientFrom, editListing.gradientTo] : GRAD_PRESETS[gradIdx];
+
+  const pickPhoto = (file: File | null) => {
+    setPhotoError('');
+    if (!file) {
+      setPhotoFile(null);
+      return;
+    }
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+      setPhotoError(lang === 'th' ? 'ใช้ได้เฉพาะ JPEG, PNG หรือ WebP' : 'Use JPEG, PNG, or WebP only');
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError(lang === 'th' ? 'ไฟล์ใหญ่เกิน 5 MB' : 'File must be 5 MB or smaller');
+      return;
+    }
+    setPhotoFile(file);
+  };
 
   const totalSteps = 3;
   const canNext1 = productName.trim() && set && cardNumber.trim();
@@ -107,6 +143,50 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
                   aria-label={t.cardNumber}
                   placeholder="125/197"
                   className={`${inputClass} font-mono`} />
+              </div>
+
+              <div>
+                <label className="font-pixel text-[8px] uppercase tracking-wider mb-2 block section-label">{t.listingPhoto}</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_PHOTO_TYPES.join(',')}
+                  className="sr-only"
+                  aria-label={t.listingPhoto}
+                  onChange={e => pickPhoto(e.target.files?.[0] ?? null)}
+                />
+                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] overflow-hidden mb-2 detail-stat">
+                  <CardArt
+                    imageUrl={previewImageUrl}
+                    typeIcon={typeIcon}
+                    gradientFrom={gradientFrom}
+                    gradientTo={gradientTo}
+                    alt={productName || t.listingPhoto}
+                    iconClassName="text-5xl"
+                    fill
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2">{t.listingPhotoHint}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2.5 text-xs font-bold chip-btn-outline">
+                    {photoFile || previewImageUrl ? (lang === 'th' ? 'เปลี่ยนรูป' : 'Change photo') : (lang === 'th' ? 'เลือกรูป' : 'Choose photo')}
+                  </button>
+                  {(photoFile || previewImageUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        pickPhoto(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="px-3 py-2.5 text-xs font-bold chip-btn-outline text-muted-foreground">
+                      {t.removePhoto}
+                    </button>
+                  )}
+                </div>
+                {photoError && <p className="text-xs text-destructive mt-2">{photoError}</p>}
               </div>
 
               <div>
@@ -213,9 +293,16 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
 
               {/* Preview card */}
               <div className="listing-card overflow-hidden price-block">
-                <div className="aspect-[2.5/1.5] flex items-center justify-center relative scanlines"
-                  style={{ background: `linear-gradient(135deg, ${gradientFrom}33, ${gradientTo}55)` }}>
-                  <span className="text-6xl">{typeIcon}</span>
+                <div className="relative mx-auto w-full max-w-[220px] aspect-[2.5/3.5] overflow-hidden">
+                  <CardArt
+                    imageUrl={previewImageUrl}
+                    typeIcon={typeIcon}
+                    gradientFrom={gradientFrom}
+                    gradientTo={gradientTo}
+                    alt={productName || t.previewLabel}
+                    iconClassName="text-6xl"
+                    fill
+                  />
                 </div>
                 <div className="p-4">
                   <h3 className="font-display font-bold text-foreground text-base">{productName || '—'}</h3>
@@ -263,6 +350,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
             </button>
           ) : (
             <button onClick={() => {
+              if (photoError) return;
               onSubmit({
                 productName, set, cardNumber, condition, language: cardLang,
                 listedPrice: parseFloat(price) || 0, currency, quantity: parseInt(quantity) || 1,
@@ -270,7 +358,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
                 status: 'active', views: 0, likes: 0,
                 createdAt: new Date().toISOString().split('T')[0],
                 rarity: 'rare', setCode: cardNumber,
-              });
+              }, photoFile);
               onClose();
             }} className="flex-1 py-3.5 text-sm font-bold btn-primary" style={{ borderRadius: 4 }}>
               ✓ {editListing ? t.save : t.createListing}
