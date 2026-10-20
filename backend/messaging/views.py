@@ -8,9 +8,9 @@ from rest_framework.response import Response
 from .models import Conversation, Deal, Offer
 from .serializers import (
     ConversationSerializer, CounterOfferSerializer, DealSerializer, MessageSerializer, OfferSerializer,
-    ReadConversationSerializer, ReviewCreateSerializer, ReviewSerializer,
+    ReadConversationSerializer, ReviewCreateSerializer, ReviewSerializer, SellerReserveSerializer,
 )
-from .services import cancel_deal, confirm_deal, create_review, place_offer, transition_offer
+from .services import cancel_deal, confirm_deal, create_review, place_offer, seller_reserve_listing, transition_offer
 
 
 def call_service(func, *args):
@@ -74,6 +74,20 @@ class ConversationViewSet(viewsets.ModelViewSet):
             serializer.validated_data["amount"], serializer.validated_data["currency"],
         )
         return Response(OfferSerializer(offer).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=("post",))
+    def reserve(self, request, pk=None):
+        conversation = self.get_object()
+        serializer = SellerReserveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        amount = serializer.validated_data.get("amount")
+        if amount is None:
+            amount = conversation.listing.asking_price
+        deal = call_service(seller_reserve_listing, conversation, request.user, amount)
+        return Response(
+            DealSerializer(deal, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OfferViewSet(viewsets.ReadOnlyModelViewSet):

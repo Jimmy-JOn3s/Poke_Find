@@ -14,7 +14,9 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 - Saved-listing API
 - Private buyer/seller conversations and messages
 - Offers and counter-offers answered by the other party; accepting reserves the
-  listing, either side can cancel before confirming, and both confirm completion
+  listing. Sellers can also reserve a card for a buyer directly from chat (no
+  buyer acceptance). Either side can cancel before confirming, and both confirm
+  completion
 - Django admin and deterministic demo data
 
 Payments, escrow, delivery booking, live exchange rates, and production

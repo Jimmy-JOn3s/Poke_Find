@@ -21,12 +21,14 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     type: "พิมพ์ข้อความ...", send: "ส่ง", offer: "เสนอราคา", accept: "ยอมรับ",
     decline: "ปฏิเสธ", complete: "ยืนยันว่าซื้อขายสำเร็จ", retry: "ลองอีกครั้ง",
     cancelDeal: "ยกเลิกดีล",
+    reserve: "จองการ์ดให้ผู้ซื้อ", reserveHint: "ราคาที่ตกลง (ว่าง = ราคาประกาศ)",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
     type: "Type a message...", send: "Send", offer: "Make offer", accept: "Accept",
     decline: "Decline", complete: "Confirm completed trade", retry: "Try again",
     cancelDeal: "Cancel deal",
+    reserve: "Reserve card for buyer", reserveHint: "Agreed price (leave blank for listed price)",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -49,6 +51,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [offers, setOffers] = useState<ApiOffer[]>([]);
   const [body, setBody] = useState("");
   const [offerAmount, setOfferAmount] = useState("");
+  const [reservePrice, setReservePrice] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
@@ -99,7 +102,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     void loadThreads();
   }, [isAuthenticated]);
   useEffect(() => {
-    setMessages([]); setOffers([]); setBody(""); setOfferAmount(""); setError("");
+    setMessages([]); setOffers([]); setBody(""); setOfferAmount(""); setReservePrice(""); setError("");
     if (!active) return;
     // Ignore stale responses if the user switches chats or leaves the page.
     let ignore = false;
@@ -145,6 +148,18 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     catch (caught) { setError(caught instanceof Error ? caught.message : "Request failed"); }
   };
 
+  const reserveForBuyer = async () => {
+    if (!active) return;
+    try {
+      await api.reserveListing(active.id, reservePrice.trim() || undefined);
+      setReservePrice("");
+      await loadThreads();
+      setOffers(await api.offers(active.id));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Request failed");
+    }
+  };
+
   const actOnOffer = async (offer: ApiOffer, action: "accept" | "decline") => {
     try {
       const updated = action === "accept" ? await api.acceptOffer(offer.id) : await api.declineOffer(offer.id);
@@ -162,6 +177,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
       && `${threadLabel(thread)} ${thread.listing.product_name}`.toLowerCase().includes(search.toLowerCase());
   }).sort((a, b) => Date.parse(b.latest_message?.created_at || b.updated_at) - Date.parse(a.latest_message?.created_at || a.updated_at));
   const timeLabel = (date: string) => new Intl.DateTimeFormat(lang === "th" ? "th-TH" : "en-US", { month: "short", day: "numeric" }).format(new Date(date));
+  const isSeller = active != null && currentUser != null && active.seller.id === Number(currentUser.id);
+  const canReserve = isSeller && !active?.deal && active.listing.status === "active";
 
   return (
     <div className="flex flex-col h-full min-h-0 pixel-bg">
@@ -256,6 +273,15 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
             ))}
           </div>
           <div className="p-3 md:p-4 space-y-2 shrink-0 max-w-3xl w-full chat-toolbar">
+            {canReserve && (
+              <div className="flex gap-2">
+                <input value={reservePrice} onChange={event => setReservePrice(event.target.value)} type="number"
+                  aria-label={copy.reserveHint}
+                  placeholder={copy.reserveHint}
+                  className="flex-1 min-w-0 field-input text-sm" />
+                <button onClick={() => void reserveForBuyer()} className="btn-primary px-3 text-xs shrink-0">{copy.reserve}</button>
+              </div>
+            )}
             <div className="flex gap-2">
               <input value={offerAmount} onChange={event => setOfferAmount(event.target.value)} type="number"
                 aria-label={`${copy.offer} (${active.listing.currency})`}
