@@ -4,6 +4,7 @@ import { i18n } from '../i18n';
 import { MOCK_USERS } from '../mockData';
 import Price from '../components/Price';
 import CardArt from '../components/CardArt';
+import ReportModal from '../components/ReportModal';
 
 interface Props {
   listing: Listing;
@@ -15,12 +16,14 @@ interface Props {
   onEditListing?: (listing: Listing) => void;
   onDeleteListing?: (listingId: string) => void;
   displayCurrency: Currency;
+  onSignIn: () => void;
 }
 
-export default function ListingDetailPage({ listing, lang, currentUser, onBack, onChat, onViewProfile, onEditListing, onDeleteListing, displayCurrency }: Props) {
+export default function ListingDetailPage({ listing, lang, currentUser, onBack, onChat, onViewProfile, onEditListing, onDeleteListing, displayCurrency, onSignIn }: Props) {
   const t = i18n[lang];
   const [liked, setLiked] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const isOwner = currentUser?.id === listing.sellerId;
   const seller = MOCK_USERS.find(u => u.id === listing.sellerId) || {
     id: listing.sellerId, name: listing.sellerName, avatar: listing.sellerAvatar,
@@ -143,12 +146,20 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           )}
 
           {/* Meta */}
-          <div className="flex gap-3 text-xs text-muted-foreground font-mono mb-2 md:mb-0">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-mono mb-2 md:mb-0">
             <span>♥ {liked ? listing.likes + 1 : listing.likes}</span>
             <span>·</span>
             <span>👁 {listing.views}</span>
             <span>·</span>
             <span>{t.postedOn} {listing.createdAt}</span>
+            {!isOwner && (
+              <>
+                <span>·</span>
+                <button type="button" onClick={() => setShowReport(true)} className="text-danger underline underline-offset-2 font-display">
+                  {t.report}
+                </button>
+              </>
+            )}
           </div>
 
           {/* CTA — inline on desktop */}
@@ -176,6 +187,11 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
       )}
 
       {/* Delete confirm */}
+      {showReport && (
+        <ReportModal lang={lang} isAuthenticated={Boolean(currentUser)} onSignIn={onSignIn} onClose={() => setShowReport(false)}
+          target={{ category: 'listing', listingId: listing.id, label: listing.productName }} />
+      )}
+
       {showDelete && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in p-0 md:p-4 modal-backdrop">
           <div className="w-full max-w-lg p-5 border-t md:border rounded-t-lg md:rounded-lg modal-panel"

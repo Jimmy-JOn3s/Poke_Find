@@ -23,6 +23,7 @@ export interface User {
   bio: string;
   preferredLanguage?: AppLang;
   preferredCurrency?: Currency;
+  isStaff?: boolean;
 }
 
 export interface Listing {
@@ -108,4 +109,4 @@ export interface ReviewContext {
   revieweeName: string;
 }
 
-export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'resetPassword' | 'magicLink';
+export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'admin' | 'resetPassword'| 'magicLink';

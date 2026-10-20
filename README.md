@@ -18,6 +18,8 @@ REST API, with Thai/English interfaces and THB/USD pricing.
   listing. Sellers can also reserve a card for a buyer directly from chat (no
   buyer acceptance). Either side can cancel before confirming, and both confirm
   completion
+  listing, either side can cancel before confirming, and both confirm completion
+- User content reports (listings and profiles) and an in-app staff admin dashboard
 - Django admin and deterministic demo data
 
 Payments, escrow, delivery booking, live exchange rates, and production
@@ -106,6 +108,7 @@ never put into a build.
 | Buyer | `buyer@pokefind.local` |
 | Buyer 2 | `buyer2@pokefind.local` |
 | Business seller | `seller@pokefind.local` |
+| Admin (staff) | `admin@pokefind.local` |
 
 The seed command is safe to run again and also creates sample listings, a
 conversation, messages, and an offer.

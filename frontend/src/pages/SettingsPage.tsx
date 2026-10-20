@@ -15,9 +15,10 @@ interface Props {
   isAuthenticated: boolean;
   onSignOut: () => void;
   onSignIn: () => void;
+  onAdmin: () => void;
 }
 
-export default function SettingsPage({ lang, onLangChange, currency, onCurrencyChange, theme, onThemeChange, currentUser, isAuthenticated, onSignOut, onSignIn }: Props) {
+export default function SettingsPage({ lang, onLangChange, currency, onCurrencyChange, theme, onThemeChange, currentUser, isAuthenticated, onSignOut, onSignIn, onAdmin }: Props) {
   const t = i18n[lang];
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(false);
@@ -106,6 +107,12 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
           <SectionHeader label={t.appLanguage} />
           <div className="p-4 pb-5"><LocaleCurrencySwitcher lang={lang} currency={currency} onLangChange={onLangChange} onCurrencyChange={onCurrencyChange} /></div>
         </div>
+
+        {isAuthenticated && currentUser?.isStaff && (
+          <div className="panel-card overflow-hidden">
+            <Row icon="🛡️" label={t.adminTitle} sublabel={t.adminOnly} onClick={onAdmin} />
+          </div>
+        )}
 
         {/* Help + info */}
         <div className="panel-card overflow-hidden">

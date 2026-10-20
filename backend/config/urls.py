@@ -17,5 +17,6 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/", include("marketplace.urls")),
     path("api/", include("messaging.urls")),
+    path("api/", include("moderation.urls")),
 ]
 

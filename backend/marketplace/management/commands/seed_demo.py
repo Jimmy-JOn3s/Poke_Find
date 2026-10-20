@@ -69,6 +69,17 @@ class Command(BaseCommand):
         buyer_two.set_password(password)
         buyer_two.save()
 
+        admin, _ = User.objects.update_or_create(
+            username="demo-admin",
+            defaults={
+                "email": "admin@pokefind.local", "display_name": "PokeFind Admin",
+                "role": "personal", "preferred_language": "en", "preferred_currency": "THB",
+                "is_staff": True, "is_superuser": True,
+            },
+        )
+        admin.set_password(password)
+        admin.save()
+
         # Card images from TCGdex (https://tcgdex.dev). Thai-print SV2a cards prefer th scans when available.
         fixtures = [
             # English print, English listing title

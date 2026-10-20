@@ -5,6 +5,7 @@ import { api, mapPublicProfile } from '../lib/api';
 import Price from '../components/Price';
 import CardArt from '../components/CardArt';
 import ReviewForm from '../components/ReviewForm';
+import ReportModal from '../components/ReportModal';
 
 interface Props {
   lang: AppLang;
@@ -32,6 +33,7 @@ export default function ProfilePage({
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const profileId = viewUserId || currentUser?.id;
   const isOwnProfile = !viewUserId || viewUserId === currentUser?.id;
@@ -145,6 +147,13 @@ export default function ProfilePage({
 
           {profileUser.bio && (
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-4">{profileUser.bio}</p>
+          )}
+
+          {!isOwnProfile && (
+            <button type="button" onClick={() => setShowReport(true)}
+              className="mb-4 px-4 py-2 text-xs font-bold font-display btn-danger-outline">
+              {t.reportUser}
+            </button>
           )}
 
           <div className="flex w-full max-w-sm overflow-hidden stats-bar">
@@ -289,6 +298,11 @@ export default function ProfilePage({
           </div>
         )}
       </div>
+
+      {showReport && profileUser && (
+        <ReportModal lang={lang} isAuthenticated={isAuthenticated} onSignIn={onSignIn} onClose={() => setShowReport(false)}
+          target={{ category: 'user', reportedUserId: profileUser.id, label: profileUser.name }} />
+      )}
     </div>
   );
 }

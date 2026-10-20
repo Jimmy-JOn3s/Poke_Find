@@ -10,6 +10,7 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import AdminPage from "./pages/AdminPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import MagicLinkPage from "./pages/MagicLinkPage";
 import { api, mapListing, mapUser, setTokens } from "./lib/api";
@@ -226,7 +227,8 @@ export default function App() {
           displayCurrency={currency} onBack={() => handleNav("discover")} onChat={handleChat}
           onViewProfile={id => { setViewUserId(id); setCurrentPage("profile"); }}
           onEditListing={listing => { setEditListing(listing); setShowCreateListing(true); }}
-          onDeleteListing={id => void handleDeleteListing(id)} />;
+          onDeleteListing={id => void handleDeleteListing(id)}
+          onSignIn={() => setCurrentPage("auth")} />;
       case "chat":
         return <ChatPage initialConversationId={conversationId} lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated}
           onSignIn={() => setCurrentPage("auth")} onLeaveReview={handleLeaveReview} />;
@@ -240,9 +242,12 @@ export default function App() {
       case "settings":
         return <SettingsPage lang={lang} onLangChange={setLang} currency={currency} onCurrencyChange={setCurrency}
           theme={theme} onThemeChange={setTheme}
-          currentUser={currentUser} isAuthenticated={isAuthenticated} onSignOut={handleSignOut} onSignIn={() => setCurrentPage("auth")} />;
+          currentUser={currentUser} isAuthenticated={isAuthenticated} onSignOut={handleSignOut} onSignIn={() => setCurrentPage("auth")}
+          onAdmin={() => setCurrentPage("admin")} />;
       case "analytics":
         return <AnalyticsPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("profile")} />;
+      case "admin":
+        return <AdminPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("settings")} />;
       default:
         return <DiscoverPage lang={lang} listings={listings} loading={loading} error={error}
           displayCurrency={currency} onRetry={() => void reload()}

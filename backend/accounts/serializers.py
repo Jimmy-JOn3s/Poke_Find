@@ -37,9 +37,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "display_name", "role",
             "preferred_language", "preferred_currency", "avatar", "location",
-            "bio", "is_verified_seller", "date_joined",
+            "bio", "is_verified_seller", "is_staff", "date_joined",
         )
-        read_only_fields = ("id", "username", "email", "is_verified_seller", "date_joined")
+        read_only_fields = ("id", "username", "email", "is_verified_seller", "is_staff", "date_joined")
         extra_kwargs = {"avatar": {"validators": [validate_image_file_extension, validate_upload_size]}}
 
 

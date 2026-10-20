@@ -44,6 +44,52 @@ export interface ApiUser {
   avatar?: string | null;
   location?: string;
   bio?: string;
+  is_staff?: boolean;
+}
+
+export type ReportReason = "spam" | "scam" | "fake_listing" | "harassment" | "inappropriate" | "other";
+export type ReportCategory = "listing" | "user" | "message";
+export type ReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
+
+export interface ApiContentReport {
+  id: number;
+  category: ReportCategory;
+  reason: ReportReason;
+  details: string;
+  status: ReportStatus;
+  admin_notes: string;
+  reporter: { id: number; display_name: string; email: string; role: UserRole };
+  target: { kind: string; id: number; label: string } | null;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUserRow {
+  id: number;
+  display_name: string;
+  email: string;
+  role: UserRole;
+  is_staff: boolean;
+  is_verified_seller: boolean;
+  date_joined: string;
+}
+
+export interface AdminOverview {
+  users: { total: number; personal: number; business: number; staff: number };
+  listings: { total: number; active: number; reserved: number; sold: number };
+  messaging: {
+    conversations: number;
+    messages: number;
+    offers: number;
+    deals_completed: number;
+    deals_active: number;
+    reviews: number;
+  };
+  reports: { total: number; pending: number; reviewing: number; resolved: number; dismissed: number };
+  reports_by_reason: Record<string, number>;
+  reports_by_category: Record<string, number>;
 }
 
 export interface ApiListing {
@@ -163,6 +209,7 @@ export function mapUser(item: ApiUser) {
     role: item.role, verified: item.is_verified_seller, rating: 5, reviewCount: 0, totalSold: 0,
     joinedDate: new Date().toISOString().slice(0, 10), location: item.location || "", bio: item.bio || "",
     preferredLanguage: item.preferred_language, preferredCurrency: item.preferred_currency,
+    isStaff: Boolean(item.is_staff),
   };
 }
 
@@ -355,5 +402,30 @@ export const api = {
   async userReviews(userId: string): Promise<Review[]> {
     const result = await request<{ results: ApiReview[] }>(`/auth/users/${userId}/reviews/`);
     return result.results.map(mapReview);
+  },
+  submitReport(payload: {
+    category: ReportCategory;
+    reason: ReportReason;
+    details?: string;
+    listing_id?: number;
+    reported_user_id?: number;
+    message_id?: number;
+  }): Promise<ApiContentReport> {
+    return request("/reports/", { method: "POST", body: JSON.stringify(payload) });
+  },
+  adminOverview(): Promise<AdminOverview> {
+    return request("/admin/overview/");
+  },
+  async adminUsers(): Promise<AdminUserRow[]> {
+    const result = await request<{ results: AdminUserRow[] }>("/admin/users/");
+    return result.results;
+  },
+  async adminReports(status?: ReportStatus): Promise<ApiContentReport[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    const result = await request<{ results: ApiContentReport[] }>(`/admin/reports/${query}`);
+    return result.results ?? [];
+  },
+  updateAdminReport(id: number, payload: { status?: ReportStatus; admin_notes?: string }): Promise<ApiContentReport> {
+    return request(`/admin/reports/${id}/`, { method: "PATCH", body: JSON.stringify(payload) });
   },
 };

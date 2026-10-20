@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "accounts",
     "marketplace",
     "messaging",
+    "moderation",
 ]
 
 MIDDLEWARE = [
