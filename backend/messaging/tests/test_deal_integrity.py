@@ -44,6 +44,38 @@ class DealIntegrityTests(ApiTestCase):
         self.listing.refresh_from_db()
         return self.listing.status
 
+    def test_seller_can_reserve_without_buyer_acceptance(self):
+        reserved = self.as_user(self.seller).post(
+            f"/api/conversations/{self.conversation.id}/reserve/", {"amount": "500.00"}, format="json",
+        )
+        self.assertEqual(reserved.status_code, 201)
+        self.assertEqual(self.listing_status(), Listing.Status.RESERVED)
+        deal = self.live_deal(self.conversation)
+        self.assertEqual(str(deal.final_price), "500.00")
+        self.assertEqual(deal.accepted_offer.proposer_id, self.seller.id)
+        self.assertEqual(deal.accepted_offer.status, Offer.Status.ACCEPTED)
+
+    def test_seller_reserve_defaults_to_listing_price(self):
+        self.assertEqual(
+            self.as_user(self.seller).post(f"/api/conversations/{self.conversation.id}/reserve/", {}, format="json").status_code,
+            201,
+        )
+        self.assertEqual(str(self.live_deal(self.conversation).final_price), "500.00")
+
+    def test_buyer_cannot_reserve(self):
+        self.assertEqual(
+            self.as_user(self.buyer).post(f"/api/conversations/{self.conversation.id}/reserve/", {}, format="json").status_code,
+            403,
+        )
+
+    def test_seller_reserve_declines_competing_offers(self):
+        second = self.offer(self.buyer_two, self.conversation_two).data["id"]
+        self.assertEqual(
+            self.as_user(self.seller).post(f"/api/conversations/{self.conversation.id}/reserve/", {}, format="json").status_code,
+            201,
+        )
+        self.assertEqual(Offer.objects.get(pk=second).status, Offer.Status.DECLINED)
+
     def test_accepting_reserves_the_listing_and_declines_competing_offers(self):
         first = self.offer(self.buyer, self.conversation).data["id"]
         second = self.offer(self.buyer_two, self.conversation_two).data["id"]

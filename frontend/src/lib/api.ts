@@ -114,7 +114,7 @@ export interface ApiReview {
 }
 export interface ApiConversation {
   id: number;
-  listing: { id: number; product_name: string; asking_price: string; currency: Currency };
+  listing: { id: number; product_name: string; asking_price: string; currency: Currency; status: string };
   buyer: ApiUser;
   seller: ApiUser;
   latest_message: ApiMessage | null;
@@ -331,6 +331,10 @@ export const api = {
   offers(id: number): Promise<ApiOffer[]> { return request(`/conversations/${id}/offers/`); },
   sendMessage(id: number, body: string): Promise<ApiMessage> {
     return request(`/conversations/${id}/messages/`, { method: "POST", body: JSON.stringify({ body }) });
+  },
+  reserveListing(id: number, amount?: string): Promise<ApiDeal> {
+    const body = amount ? JSON.stringify({ amount }) : JSON.stringify({});
+    return request(`/conversations/${id}/reserve/`, { method: "POST", body });
   },
   createOffer(id: number, amount: string, currency: Currency): Promise<ApiOffer> {
     return request(`/conversations/${id}/offers/`, { method: "POST", body: JSON.stringify({ amount, currency }) });
