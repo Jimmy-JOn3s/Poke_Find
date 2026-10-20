@@ -8,6 +8,7 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 
 - JWT registration and login for personal and business accounts
 - Password reset by email (single-use links that expire after an hour)
+- Magic-link email sign-in (creates an account on first use; links expire after 15 minutes)
 - Thai and English interface preferences
 - THB and USD listing prices with configurable display conversion
 - Listing discovery, search, filters, creation, editing, and deletion
@@ -63,7 +64,8 @@ Edit `backend/.env`: set `DJANGO_SECRET_KEY` (generate one with
 Django loads `backend/.env` automatically; real environment variables take
 precedence. Local development (`DJANGO_DEBUG=1`) uses `backend/db.sqlite3`.
 
-Password-reset emails are printed in the runserver console during local development.
+Password-reset and magic-link emails are printed in the runserver console during local development.
+Set `RESEND_API_KEY` and `DEFAULT_FROM_EMAIL` in `backend/.env` to send real email through [Resend](https://resend.com).
 
 Verify the API at [http://127.0.0.1:8000/api/health/](http://127.0.0.1:8000/api/health/).
 The expected response is:

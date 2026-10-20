@@ -158,6 +158,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
 
 
+class MagicLinkRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class MagicLinkConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
+
+
 class RevocationCheckingRefreshSerializer(TokenRefreshSerializer):
     """Refuses refresh tokens issued before the account's password last changed, or for deleted accounts.
 

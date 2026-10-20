@@ -108,4 +108,4 @@ export interface ReviewContext {
   revieweeName: string;
 }
 
-export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'resetPassword';
+export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'resetPassword' | 'magicLink';

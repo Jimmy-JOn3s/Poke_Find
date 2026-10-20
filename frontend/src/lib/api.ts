@@ -4,6 +4,22 @@ import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review
 const ACCESS_TOKEN_KEY = "pokefind.accessToken";
 const REFRESH_TOKEN_KEY = "pokefind.refreshToken";
 
+export class ApiError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+export function isEmailDeliveryFailure(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "email_delivery_failed";
+}
+
 export function resolveApiBase(configured: string | undefined): string {
   const value = configured?.trim();
   if (!value) {
@@ -230,6 +246,7 @@ function send(path: string, init: RequestInit, token: string | null): Promise<Re
 // (401) into a refresh plus a second login attempt, doubling the attempts the rate limit counts.
 const CREDENTIAL_PATHS = new Set([
   "/auth/login/", "/auth/register/", "/auth/password-reset/", "/auth/password-reset/confirm/",
+  "/auth/magic-link/", "/auth/magic-link/confirm/",
 ]);
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -242,8 +259,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     response = await send(path, init, refreshed ? readStorage(ACCESS_TOKEN_KEY) : null);
   }
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.detail || Object.values(payload).flat().join(" ") || `Request failed (${response.status})`);
+    const payload = await response.json().catch(() => ({})) as { detail?: string; code?: string };
+    const detail = payload.detail || Object.values(payload).flat().join(" ") || `Request failed (${response.status})`;
+    throw new ApiError(String(detail), payload.code, response.status);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -271,6 +289,12 @@ export const api = {
   },
   requestPasswordReset(email: string): Promise<{ detail: string }> {
     return request("/auth/password-reset/", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  requestMagicLink(email: string): Promise<{ detail: string }> {
+    return request("/auth/magic-link/", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  confirmMagicLink(uid: string, token: string): Promise<AuthResponse> {
+    return request("/auth/magic-link/confirm/", { method: "POST", body: JSON.stringify({ uid, token }) });
   },
   confirmPasswordReset(uid: string, token: string, newPassword: string): Promise<{ detail: string }> {
     return request("/auth/password-reset/confirm/", {

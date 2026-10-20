@@ -11,8 +11,10 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import MagicLinkPage from "./pages/MagicLinkPage";
 import { api, mapListing, mapUser, setTokens } from "./lib/api";
 import { useListings } from "./hooks/useListings";
+import { readMagicLink } from "./lib/magicLink";
 import { readResetLink } from "./lib/resetLink";
 
 
@@ -27,7 +29,10 @@ export default function App() {
   const [theme, setThemeState] = useState<ThemePreference>(() => storedTheme());
   // A password-reset email opens the app with the token in the URL fragment (see backend/accounts/password_reset.py).
   const [resetLink, setResetLink] = useState(() => readResetLink(window.location.hash));
-  const [currentPage, setCurrentPage] = useState<Page>(resetLink ? "resetPassword" : "discover");
+  const [magicLink, setMagicLink] = useState(() => readMagicLink(window.location.hash));
+  const [currentPage, setCurrentPage] = useState<Page>(
+    resetLink ? "resetPassword" : magicLink ? "magicLink" : "discover",
+  );
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -49,17 +54,26 @@ export default function App() {
   useEffect(() => {
     // Also handle a reset link opened in a tab that already shows the app: only the fragment changes, so
     // the page doesn't reload.
-    const openResetLink = () => {
-      const link = readResetLink(window.location.hash);
-      if (!link) return;
-      setResetLink(link);
-      setCurrentPage("resetPassword");
+    const openAuthLink = () => {
+      const reset = readResetLink(window.location.hash);
+      const magic = readMagicLink(window.location.hash);
+      if (reset) {
+        setResetLink(reset);
+        setMagicLink(null);
+        setCurrentPage("resetPassword");
+      } else if (magic) {
+        setMagicLink(magic);
+        setResetLink(null);
+        setCurrentPage("magicLink");
+      } else {
+        return;
+      }
       // Drop the token from the address bar and the history entry as soon as it has been read.
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     };
-    openResetLink();
-    window.addEventListener("hashchange", openResetLink);
-    return () => window.removeEventListener("hashchange", openResetLink);
+    openAuthLink();
+    window.addEventListener("hashchange", openAuthLink);
+    return () => window.removeEventListener("hashchange", openAuthLink);
   }, []);
 
   useEffect(() => {
@@ -196,6 +210,14 @@ export default function App() {
       case "resetPassword":
         if (!resetLink) return null;
         return <ResetPasswordPage lang={lang} link={resetLink} onDone={() => setCurrentPage("auth")} />;
+      case "magicLink":
+        if (!magicLink) return null;
+        return <MagicLinkPage lang={lang} link={magicLink} onSignedIn={async () => {
+          setMagicLink(null);
+          setCurrentUser(mapUser(await api.me()));
+          setCurrentPage("discover");
+          await reload();
+        }} />;
       case "auth":
         return <AuthPage lang={lang} onAuth={handleAuth} error={authError} loading={authLoading} />;
       case "listing":
@@ -230,7 +252,7 @@ export default function App() {
     }
   };
 
-  const showNav = currentPage !== "auth" && currentPage !== "listing" && currentPage !== "resetPassword";
+  const showNav = currentPage !== "auth" && currentPage !== "listing" && currentPage !== "resetPassword" && currentPage !== "magicLink";
   return (
     <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
       {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{actionError} · ✕</button>}

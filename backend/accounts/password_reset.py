@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
+from common.transactional_email import EmailDeliveryError, send_transactional_email
 from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -53,11 +53,10 @@ def request_password_reset(email: str) -> None:
     language = user.preferred_language if user.preferred_language in BODIES else "en"
     body = BODIES[language].format(link=reset_link(user), minutes=settings.PASSWORD_RESET_TIMEOUT // 60)
     try:
-        send_mail(SUBJECTS[language], body, None, [user.email])
-    except Exception:
-        # A 500 here would reveal that the account exists; log it and let the user try again.
+        send_transactional_email(to=[user.email], subject=SUBJECTS[language], body=body)
+    except EmailDeliveryError:
         cache.delete(cooldown_key)
-        logger.exception("Could not send the password-reset email for user %s", user.pk)
+        raise
 
 
 def _locked_user(uid: str):
