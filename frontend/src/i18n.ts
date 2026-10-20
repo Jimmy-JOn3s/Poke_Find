@@ -26,6 +26,11 @@ const th = {
   welcomeBack: 'ยินดีต้อนรับ', createAccount: 'สมัครสมาชิก',
   email: 'อีเมล', password: 'รหัสผ่าน', fullName: 'ชื่อ-นามสกุล',
   continueWithGoogle: 'เข้าสู่ระบบด้วย Google', magicLink: 'ส่งลิงก์เข้าสู่ระบบ',
+  signInWithEmailLink: 'ลิงก์ทางอีเมล', signInWithPassword: 'รหัสผ่าน',
+  magicLinkHelp: 'เราจะส่งลิงก์เข้าสู่ระบบให้ ไม่ต้องจำรหัสผ่าน หากยังไม่มีบัญชี เราจะสร้างให้อัตโนมัติ',
+  magicLinkResend: 'ส่งลิงก์อีกครั้ง',
+  emailSendFailed: 'ส่งอีเมลไม่สำเร็จ ลองอีกครั้งในอีกสักครู่ หรือตรวจสอบที่อยู่อีเมล',
+  signupPasswordNote: 'สมัครด้วยรหัสผ่าน — หรือใช้แท็บเข้าสู่ระบบ → ลิงก์ทางอีเมล หากไม่ต้องการตั้งรหัสผ่าน',
   personalAccount: 'บัญชีส่วนตัว', businessAccount: 'บัญชีธุรกิจ',
   personalDesc: 'สำหรับผู้ซื้อขายทั่วไป', businessDesc: 'สำหรับร้านค้าและผู้ขายรายใหญ่',
   verification: 'ยืนยันตัวตน', uploadId: 'อัปโหลดบัตรประชาชน / พาสปอร์ต',
@@ -46,6 +51,7 @@ const th = {
   passwordsDontMatch: 'รหัสผ่านไม่ตรงกัน', saveNewPassword: 'บันทึกรหัสผ่านใหม่',
   passwordUpdated: 'เปลี่ยนรหัสผ่านแล้ว และออกจากระบบทุกอุปกรณ์ โปรดเข้าสู่ระบบด้วยรหัสผ่านใหม่',
   backToSignIn: 'ไปหน้าเข้าสู่ระบบ',
+  magicLinkSigningIn: 'กำลังเข้าสู่ระบบ…',
   startUsing: 'เริ่มใช้งาน',
 
   // Chat
@@ -103,6 +109,23 @@ const th = {
   businessFeatures: 'ฟีเจอร์ธุรกิจ',
   displayCurrency: 'สกุลเงินที่แสดง', thaiBaht: 'บาทไทย', usDollar: 'ดอลลาร์สหรัฐ',
   tryAgain: 'ลองอีกครั้ง', networkError: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้',
+
+  report: 'รายงาน', reportContent: 'รายงานเนื้อหา', reportListing: 'รายงานรายการนี้', reportUser: 'รายงานผู้ใช้',
+  reportReason: 'เหตุผล', reportDetails: 'รายละเอียดเพิ่มเติม (ไม่บังคับ)',
+  reportDetailsPlaceholder: 'อธิบายปัญหาให้ทีมงานทราบ...',
+  reportSubmit: 'ส่งรายงาน', reportSubmitted: 'ส่งรายงานแล้ว ขอบคุณที่ช่วยดูแลชุมชน',
+  reportSignIn: 'เข้าสู่ระบบเพื่อส่งรายงาน',
+  reportReasonSpam: 'สแปม', reportReasonScam: 'หลอกลวง / ฉ้อโกง',
+  reportReasonFakeListing: 'รายการปลอมหรือทำให้เข้าใจผิด', reportReasonHarassment: 'คุกคาม',
+  reportReasonInappropriate: 'เนื้อหาไม่เหมาะสม', reportReasonOther: 'อื่นๆ',
+
+  adminTitle: 'แผงผู้ดูแล', adminOnly: 'เฉพาะผู้ดูแลระบบ', adminOverview: 'ภาพรวม',
+  adminReports: 'รายงาน', adminUsers: 'ผู้ใช้', adminListings: 'รายการ', adminStaff: 'ทีมงาน',
+  adminPending: 'รอตรวจ', adminReviewing: 'กำลังตรวจ', adminResolved: 'แก้ไขแล้ว', adminDismissed: 'ปิดแล้ว',
+  adminConversations: 'การสนทนา', adminMessages: 'ข้อความ', adminOffers: 'ข้อเสนอ',
+  adminDealsCompleted: 'ดีลสำเร็จ', adminDealsActive: 'ดีลค้าง', adminReviewsCount: 'รีวิว',
+  adminNotes: 'บันทึกผู้ดูแล', adminUpdateStatus: 'อัปเดตสถานะ', adminNoReports: 'ยังไม่มีรายงาน',
+  adminOpenDjango: 'Django Admin (ขั้นสูง)',
 };
 
 const en: typeof th = {
@@ -125,6 +148,11 @@ const en: typeof th = {
   welcomeBack: 'Welcome Back', createAccount: 'Create Account',
   email: 'Email', password: 'Password', fullName: 'Full Name',
   continueWithGoogle: 'Continue with Google', magicLink: 'Send Magic Link',
+  signInWithEmailLink: 'Email link', signInWithPassword: 'Password',
+  magicLinkHelp: 'We\'ll email you a sign-in link—no password needed. New here? We\'ll create your account when you open the link.',
+  magicLinkResend: 'Send another link',
+  emailSendFailed: "We couldn't send that email. Wait a minute and try again, or check the address.",
+  signupPasswordNote: 'Sign up with a password—or use Sign in → Email link if you prefer not to set one.',
   personalAccount: 'Personal Account', businessAccount: 'Business Account',
   personalDesc: 'For casual buyers and sellers', businessDesc: 'For shops and high-volume sellers',
   verification: 'Identity Verification', uploadId: 'Upload ID / Passport',
@@ -145,6 +173,7 @@ const en: typeof th = {
   passwordsDontMatch: "Passwords don't match", saveNewPassword: 'Save new password',
   passwordUpdated: 'Password changed, and every device was signed out. Sign in with your new password.',
   backToSignIn: 'Go to sign in',
+  magicLinkSigningIn: 'Signing you in…',
   startUsing: 'Get Started',
 
   chatTitle: 'Messages', noChats: 'No conversations yet', typeMessage: 'Type a message...',
@@ -197,6 +226,23 @@ const en: typeof th = {
   businessFeatures: 'Business Features',
   displayCurrency: 'Display Currency', thaiBaht: 'Thai baht', usDollar: 'US dollar',
   tryAgain: 'Try again', networkError: 'Could not reach the server',
+
+  report: 'Report', reportContent: 'Report content', reportListing: 'Report this listing', reportUser: 'Report user',
+  reportReason: 'Reason', reportDetails: 'Additional details (optional)',
+  reportDetailsPlaceholder: 'Tell us what happened...',
+  reportSubmit: 'Submit report', reportSubmitted: 'Report submitted. Thanks for helping keep the community safe.',
+  reportSignIn: 'Sign in to submit a report',
+  reportReasonSpam: 'Spam', reportReasonScam: 'Scam or fraud',
+  reportReasonFakeListing: 'Fake or misleading listing', reportReasonHarassment: 'Harassment',
+  reportReasonInappropriate: 'Inappropriate content', reportReasonOther: 'Other',
+
+  adminTitle: 'Admin dashboard', adminOnly: 'Staff only', adminOverview: 'Overview',
+  adminReports: 'Reports', adminUsers: 'Users', adminListings: 'Listings', adminStaff: 'Staff',
+  adminPending: 'Pending', adminReviewing: 'Reviewing', adminResolved: 'Resolved', adminDismissed: 'Dismissed',
+  adminConversations: 'Conversations', adminMessages: 'Messages', adminOffers: 'Offers',
+  adminDealsCompleted: 'Completed deals', adminDealsActive: 'Active deals', adminReviewsCount: 'Reviews',
+  adminNotes: 'Admin notes', adminUpdateStatus: 'Update status', adminNoReports: 'No reports yet',
+  adminOpenDjango: 'Django Admin (advanced)',
 };
 
 export const i18n: Record<AppLang, typeof th> = { th, en };

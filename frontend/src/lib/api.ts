@@ -4,6 +4,22 @@ import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review
 const ACCESS_TOKEN_KEY = "pokefind.accessToken";
 const REFRESH_TOKEN_KEY = "pokefind.refreshToken";
 
+export class ApiError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+export function isEmailDeliveryFailure(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "email_delivery_failed";
+}
+
 export function resolveApiBase(configured: string | undefined): string {
   const value = configured?.trim();
   if (!value) {
@@ -28,6 +44,52 @@ export interface ApiUser {
   avatar?: string | null;
   location?: string;
   bio?: string;
+  is_staff?: boolean;
+}
+
+export type ReportReason = "spam" | "scam" | "fake_listing" | "harassment" | "inappropriate" | "other";
+export type ReportCategory = "listing" | "user" | "message";
+export type ReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
+
+export interface ApiContentReport {
+  id: number;
+  category: ReportCategory;
+  reason: ReportReason;
+  details: string;
+  status: ReportStatus;
+  admin_notes: string;
+  reporter: { id: number; display_name: string; email: string; role: UserRole };
+  target: { kind: string; id: number; label: string } | null;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUserRow {
+  id: number;
+  display_name: string;
+  email: string;
+  role: UserRole;
+  is_staff: boolean;
+  is_verified_seller: boolean;
+  date_joined: string;
+}
+
+export interface AdminOverview {
+  users: { total: number; personal: number; business: number; staff: number };
+  listings: { total: number; active: number; reserved: number; sold: number };
+  messaging: {
+    conversations: number;
+    messages: number;
+    offers: number;
+    deals_completed: number;
+    deals_active: number;
+    reviews: number;
+  };
+  reports: { total: number; pending: number; reviewing: number; resolved: number; dismissed: number };
+  reports_by_reason: Record<string, number>;
+  reports_by_category: Record<string, number>;
 }
 
 export interface ApiListing {
@@ -98,7 +160,7 @@ export interface ApiReview {
 }
 export interface ApiConversation {
   id: number;
-  listing: { id: number; product_name: string; asking_price: string; currency: Currency };
+  listing: { id: number; product_name: string; asking_price: string; currency: Currency; status: string };
   buyer: ApiUser;
   seller: ApiUser;
   latest_message: ApiMessage | null;
@@ -147,6 +209,7 @@ export function mapUser(item: ApiUser) {
     role: item.role, verified: item.is_verified_seller, rating: 5, reviewCount: 0, totalSold: 0,
     joinedDate: new Date().toISOString().slice(0, 10), location: item.location || "", bio: item.bio || "",
     preferredLanguage: item.preferred_language, preferredCurrency: item.preferred_currency,
+    isStaff: Boolean(item.is_staff),
   };
 }
 
@@ -230,6 +293,7 @@ function send(path: string, init: RequestInit, token: string | null): Promise<Re
 // (401) into a refresh plus a second login attempt, doubling the attempts the rate limit counts.
 const CREDENTIAL_PATHS = new Set([
   "/auth/login/", "/auth/register/", "/auth/password-reset/", "/auth/password-reset/confirm/",
+  "/auth/magic-link/", "/auth/magic-link/confirm/",
 ]);
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -242,8 +306,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     response = await send(path, init, refreshed ? readStorage(ACCESS_TOKEN_KEY) : null);
   }
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.detail || Object.values(payload).flat().join(" ") || `Request failed (${response.status})`);
+    const payload = await response.json().catch(() => ({})) as { detail?: string; code?: string };
+    const detail = payload.detail || Object.values(payload).flat().join(" ") || `Request failed (${response.status})`;
+    throw new ApiError(String(detail), payload.code, response.status);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -271,6 +336,12 @@ export const api = {
   },
   requestPasswordReset(email: string): Promise<{ detail: string }> {
     return request("/auth/password-reset/", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  requestMagicLink(email: string): Promise<{ detail: string }> {
+    return request("/auth/magic-link/", { method: "POST", body: JSON.stringify({ email }) });
+  },
+  confirmMagicLink(uid: string, token: string): Promise<AuthResponse> {
+    return request("/auth/magic-link/confirm/", { method: "POST", body: JSON.stringify({ uid, token }) });
   },
   confirmPasswordReset(uid: string, token: string, newPassword: string): Promise<{ detail: string }> {
     return request("/auth/password-reset/confirm/", {
@@ -308,6 +379,10 @@ export const api = {
   sendMessage(id: number, body: string): Promise<ApiMessage> {
     return request(`/conversations/${id}/messages/`, { method: "POST", body: JSON.stringify({ body }) });
   },
+  reserveListing(id: number, amount?: string): Promise<ApiDeal> {
+    const body = amount ? JSON.stringify({ amount }) : JSON.stringify({});
+    return request(`/conversations/${id}/reserve/`, { method: "POST", body });
+  },
   createOffer(id: number, amount: string, currency: Currency): Promise<ApiOffer> {
     return request(`/conversations/${id}/offers/`, { method: "POST", body: JSON.stringify({ amount, currency }) });
   },
@@ -327,5 +402,30 @@ export const api = {
   async userReviews(userId: string): Promise<Review[]> {
     const result = await request<{ results: ApiReview[] }>(`/auth/users/${userId}/reviews/`);
     return result.results.map(mapReview);
+  },
+  submitReport(payload: {
+    category: ReportCategory;
+    reason: ReportReason;
+    details?: string;
+    listing_id?: number;
+    reported_user_id?: number;
+    message_id?: number;
+  }): Promise<ApiContentReport> {
+    return request("/reports/", { method: "POST", body: JSON.stringify(payload) });
+  },
+  adminOverview(): Promise<AdminOverview> {
+    return request("/admin/overview/");
+  },
+  async adminUsers(): Promise<AdminUserRow[]> {
+    const result = await request<{ results: AdminUserRow[] }>("/admin/users/");
+    return result.results;
+  },
+  async adminReports(status?: ReportStatus): Promise<ApiContentReport[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    const result = await request<{ results: ApiContentReport[] }>(`/admin/reports/${query}`);
+    return result.results ?? [];
+  },
+  updateAdminReport(id: number, payload: { status?: ReportStatus; admin_notes?: string }): Promise<ApiContentReport> {
+    return request(`/admin/reports/${id}/`, { method: "PATCH", body: JSON.stringify(payload) });
   },
 };

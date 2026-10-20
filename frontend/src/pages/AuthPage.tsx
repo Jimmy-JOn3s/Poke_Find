@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { AppLang, UserRole } from '../types';
 import { i18n } from '../i18n';
-import { api } from '../lib/api';
+import { api, isEmailDeliveryFailure } from '../lib/api';
 
 interface Props {
   lang: AppLang;
@@ -21,7 +21,10 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>('personal');
+  const [signInMethod, setSignInMethod] = useState<'emailLink' | 'password'>('emailLink');
   const [magicSent, setMagicSent] = useState(false);
+  const [magicSending, setMagicSending] = useState(false);
+  const [magicError, setMagicError] = useState('');
   const [verifyType, setVerifyType] = useState<'id' | 'passport'>('id');
   const [frontUploaded, setFrontUploaded] = useState(false);
   const [backUploaded, setBackUploaded] = useState(false);
@@ -31,6 +34,27 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const [resetSent, setResetSent] = useState(false);
   const [resetError, setResetError] = useState('');
 
+  const authRequestError = (caught: unknown) => {
+    if (caught instanceof Error && isEmailDeliveryFailure(caught)) {
+      return caught.message || t.emailSendFailed;
+    }
+    return caught instanceof Error ? caught.message : 'Request failed';
+  };
+
+  const sendMagicLink = async () => {
+    setMagicSending(true);
+    setMagicError('');
+    try {
+      await api.requestMagicLink(email);
+      setMagicSent(true);
+    } catch (caught) {
+      setMagicSent(false);
+      setMagicError(authRequestError(caught));
+    } finally {
+      setMagicSending(false);
+    }
+  };
+
   const sendReset = async () => {
     setResetSending(true);
     setResetError('');
@@ -38,7 +62,8 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
       await api.requestPasswordReset(email);
       setResetSent(true);
     } catch (caught) {
-      setResetError(caught instanceof Error ? caught.message : 'Request failed');
+      setResetSent(false);
+      setResetError(authRequestError(caught));
     } finally {
       setResetSending(false);
     }
@@ -57,9 +82,29 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const fillDemoAccount = (account: 'buyer' | 'buyer2' | 'seller') => {
     setMode('signin');
     setStep(1);
+    setSignInMethod('password');
     setMagicSent(false);
     setEmail(`${account}@pokefind.local`);
     setPassword(__DEMO_PASSWORD__);
+  };
+
+  const switchMode = (next: 'signin' | 'signup') => {
+    setMode(next);
+    setStep(1);
+    setMagicSent(false);
+    setMagicError('');
+    setForgotOpen(false);
+    setResetSent(false);
+    setResetError('');
+  };
+
+  const switchSignInMethod = (next: 'emailLink' | 'password') => {
+    setSignInMethod(next);
+    setMagicSent(false);
+    setMagicError('');
+    setForgotOpen(false);
+    setResetSent(false);
+    setResetError('');
   };
 
   const totalSteps = mode === 'signup' ? 3 : 1;
@@ -108,7 +153,7 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
             {/* Mode toggle */}
             <div className="flex overflow-hidden mb-5 mt-2 border border-border" style={{ borderRadius: 4 }}>
               {(['signin', 'signup'] as const).map(m => (
-                <button key={m} onClick={() => { setMode(m); setStep(1); setMagicSent(false); }}
+                <button key={m} type="button" onClick={() => switchMode(m)}
                   className={`flex-1 py-2.5 text-sm font-bold transition-all font-display ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                   style={{ boxShadow: mode === m ? 'inset 2px 2px 0 var(--color-shadow-pixel)' : 'none' }}>
                   {m === 'signin' ? t.signIn : t.createAccount}
@@ -144,64 +189,101 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
               <div className="flex-1 h-px bg-border" />
             </div>
 
+            {mode === 'signin' && (
+              <div className="flex overflow-hidden mb-4 border border-border" style={{ borderRadius: 4 }} role="tablist" aria-label={t.signIn}>
+                {(['emailLink', 'password'] as const).map(method => (
+                  <button key={method} type="button" role="tab" aria-selected={signInMethod === method}
+                    onClick={() => switchSignInMethod(method)}
+                    className={`flex-1 py-2 text-xs font-bold transition-all font-display ${signInMethod === method ? 'bg-muted text-foreground' : 'text-muted-foreground'}`}
+                    style={{ boxShadow: signInMethod === method ? 'inset 0 -2px 0 var(--color-primary)' : 'none' }}>
+                    {method === 'emailLink' ? t.signInWithEmailLink : t.signInWithPassword}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {mode === 'signup' && (
-              <input type="text" value={name} onChange={e => setName(e.target.value)}
-                aria-label={t.fullName}
-                placeholder={t.fullName} className={`${inputClass} mb-3 block`} />
+              <>
+                <input type="text" value={name} onChange={e => setName(e.target.value)}
+                  aria-label={t.fullName}
+                  placeholder={t.fullName} className={`${inputClass} mb-3 block`} />
+                <p className="text-xs text-muted-foreground mb-3">{t.signupPasswordNote}</p>
+              </>
+            )}
+
+            {mode === 'signin' && signInMethod === 'emailLink' && (
+              <p className="text-xs text-muted-foreground mb-3">{t.magicLinkHelp}</p>
             )}
 
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               aria-label={t.email} autoComplete="email"
               placeholder={t.email} className={`${inputClass} mb-3 block`} />
 
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              aria-label={t.password} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              placeholder={t.password} className={`${inputClass} mb-3 block`} />
-            {mode === 'signin' && (
-              <button type="button" onClick={() => { setForgotOpen(open => !open); setResetSent(false); setResetError(''); }}
-                aria-expanded={forgotOpen} className="block ml-auto -mt-1 mb-3 text-xs text-primary">
-                {t.forgotPassword}
-              </button>
-            )}
-            {mode === 'signin' && forgotOpen && (
-              <div className="mb-3 p-3 text-xs detail-stat">
-                {resetSent ? (
-                  <p className="text-success">✓ {t.resetLinkSent}</p>
-                ) : (
-                  <>
-                    <p className="text-muted-foreground mb-2">{t.forgotPasswordHelp}</p>
-                    {resetError && <p className="text-danger mb-2">{resetError}</p>}
-                    <button type="button" disabled={resetSending || !email} onClick={() => void sendReset()}
-                      className="w-full py-2 text-xs font-bold btn-primary"
-                      style={{ borderRadius: 4, opacity: resetSending || !email ? 0.45 : 1 }}>
-                      {resetSending ? t.loading : t.sendResetLink}
-                    </button>
-                  </>
+            {(mode === 'signup' || (mode === 'signin' && signInMethod === 'password')) && (
+              <>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  aria-label={t.password} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  placeholder={t.password} className={`${inputClass} mb-3 block`} />
+                {mode === 'signin' && (
+                  <button type="button" onClick={() => { setForgotOpen(open => !open); setResetSent(false); setResetError(''); }}
+                    aria-expanded={forgotOpen} className="block ml-auto -mt-1 mb-3 text-xs text-primary">
+                    {t.forgotPassword}
+                  </button>
                 )}
-              </div>
+                {mode === 'signin' && forgotOpen && (
+                  <div className="mb-3 p-3 text-xs detail-stat">
+                    {resetSent ? (
+                      <p className="text-success">✓ {t.resetLinkSent}</p>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground mb-2">{t.forgotPasswordHelp}</p>
+                        {resetError && <p className="text-danger mb-2">{resetError}</p>}
+                        <button type="button" disabled={resetSending || !email} onClick={() => void sendReset()}
+                          className="w-full py-2 text-xs font-bold btn-primary"
+                          style={{ borderRadius: 4, opacity: resetSending || !email ? 0.45 : 1 }}>
+                          {resetSending ? t.loading : t.sendResetLink}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {error && <p className="text-xs mb-3 text-danger">{error}</p>}
 
-            {!magicSent ? (
-              <button onClick={() => { if (email) setMagicSent(true); }}
-                className="w-full py-3 text-sm font-semibold mb-2 transition-all"
-                style={{ background: 'rgba(255,214,0,0.1)', border: '1px solid rgba(255,214,0,0.35)', borderRadius: 4, color: '#FFD600', fontFamily: "'Chakra Petch', sans-serif" }}>
-                ✉ {t.magicLink}
-              </button>
-            ) : (
-              <div className="w-full py-3.5 text-sm text-center mb-2"
-                style={{ background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: 4, color: '#00E676' }}>
-                ✓ {t.linkSentTo} {email || 'อีเมล'}
-              </div>
+            {mode === 'signin' && signInMethod === 'emailLink' && (
+              <>
+                {magicError && <p className="text-xs mb-3 text-danger">{magicError}</p>}
+                {magicSent ? (
+                  <div className="mb-3">
+                    <div className="w-full py-3.5 text-sm text-center"
+                      style={{ background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: 4, color: '#00E676' }}>
+                      ✓ {t.linkSentTo} {email}
+                    </div>
+                    <button type="button" disabled={magicSending || !email} onClick={() => void sendMagicLink()}
+                      className="w-full mt-2 py-2 text-xs text-primary">
+                      {magicSending ? t.loading : t.magicLinkResend}
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" disabled={magicSending || !email} onClick={() => void sendMagicLink()}
+                    className="w-full py-3 text-sm font-bold btn-primary mb-1"
+                    style={{ borderRadius: 4, opacity: magicSending || !email ? 0.45 : 1 }}>
+                    {magicSending ? t.loading : t.magicLink}
+                  </button>
+                )}
+              </>
             )}
 
-            <button disabled={loading || !email || password.length < 8}
-              onClick={() => mode === 'signup' ? setStep(2) : void onAuth('personal', name || (lang === 'th' ? 'ผู้ใช้' : 'User'), email, password, 'signin')}
-              className="w-full py-3 text-sm font-bold btn-primary"
-              style={{ borderRadius: 4, marginTop: 4, opacity: loading || !email || password.length < 8 ? 0.45 : 1 }}>
-              {loading ? t.loading : mode === 'signin' ? t.signIn : `${t.next} →`}
-            </button>
+            {(mode === 'signup' || (mode === 'signin' && signInMethod === 'password')) && (
+              <button type="button" disabled={loading || !email || password.length < 8}
+                onClick={() => mode === 'signup' ? setStep(2) : void onAuth('personal', name || (lang === 'th' ? 'ผู้ใช้' : 'User'), email, password, 'signin')}
+                className="w-full py-3 text-sm font-bold btn-primary"
+                style={{ borderRadius: 4, marginTop: 4, opacity: loading || !email || password.length < 8 ? 0.45 : 1 }}>
+                {loading ? t.loading : mode === 'signin' ? t.signIn : `${t.next} →`}
+              </button>
+            )}
           </div>
         )}
 

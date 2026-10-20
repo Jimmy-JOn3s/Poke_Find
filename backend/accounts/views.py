@@ -7,13 +7,17 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenObtainPairView
 
+from common.exceptions import EmailDeliveryFailed
+from common.transactional_email import EmailDeliveryError
 from messaging.models import Review
 from messaging.serializers import ReviewSerializer
 
 from .serializers import (
-    EmailOrUsernameTokenObtainPairSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
+    EmailOrUsernameTokenObtainPairSerializer, MagicLinkConfirmSerializer, MagicLinkRequestSerializer,
+    PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
     PublicUserProfileSerializer, RegisterSerializer, UserSerializer,
 )
+from .magic_link import REQUESTED as MAGIC_LINK_REQUESTED, confirm_magic_link, request_magic_link
 from .password_reset import confirm_password_reset, request_password_reset
 
 
@@ -96,7 +100,10 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        request_password_reset(serializer.validated_data["email"])
+        try:
+            request_password_reset(serializer.validated_data["email"])
+        except EmailDeliveryError as exc:
+            raise EmailDeliveryFailed(detail=exc.detail)
         return Response({"detail": RESET_REQUESTED})
 
 
@@ -109,3 +116,34 @@ class PasswordResetConfirmView(AuthAttemptThrottleMixin, APIView):
         serializer.is_valid(raise_exception=True)
         confirm_password_reset(**serializer.validated_data)
         return Response({"detail": "Password updated. Sign in with your new password."})
+
+
+class MagicLinkRequestView(APIView):
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = ()
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "magic_link"
+
+    def post(self, request):
+        serializer = MagicLinkRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            request_magic_link(serializer.validated_data["email"])
+        except EmailDeliveryError as exc:
+            raise EmailDeliveryFailed(detail=exc.detail)
+        return Response({"detail": MAGIC_LINK_REQUESTED})
+
+
+class MagicLinkConfirmView(AuthAttemptThrottleMixin, APIView):
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = ()
+
+    def post(self, request):
+        serializer = MagicLinkConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        access, refresh, user = confirm_magic_link(**serializer.validated_data)
+        return Response({
+            "access": access,
+            "refresh": refresh,
+            "user": UserSerializer(user, context={"request": request}).data,
+        })

@@ -55,6 +55,10 @@ class CounterOfferSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
 
 
+class SellerReserveSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"), required=False)
+
+
 class DealSerializer(serializers.ModelSerializer):
     reviewer_has_reviewed = serializers.SerializerMethodField()
     counterparty_id = serializers.SerializerMethodField()
@@ -121,7 +125,13 @@ class ConversationSerializer(serializers.ModelSerializer):
         return DealSerializer(deal, context=self.context).data if deal else None
 
     def get_listing(self, obj):
-        return {"id": obj.listing_id, "product_name": obj.listing.product_name, "asking_price": str(obj.listing.asking_price), "currency": obj.listing.currency}
+        return {
+            "id": obj.listing_id,
+            "product_name": obj.listing.product_name,
+            "asking_price": str(obj.listing.asking_price),
+            "currency": obj.listing.currency,
+            "status": obj.listing.status,
+        }
 
     def get_unread_count(self, obj):
         user = self.context["request"].user

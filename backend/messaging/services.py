@@ -37,6 +37,21 @@ def _claim_pending_offer(offer: Offer, new_status: str) -> None:
     offer.status = new_status
 
 
+def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: Offer) -> Deal:
+    if not _move_listing(listing.pk, Listing.Status.ACTIVE, Listing.Status.RESERVED):
+        raise ValidationError("This listing is no longer available")
+    try:
+        deal = Deal.objects.create(
+            conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
+        )
+    except IntegrityError as exc:
+        raise ValidationError("This conversation already has a deal") from exc
+    Offer.objects.filter(
+        conversation__listing_id=listing.pk, status=Offer.Status.PENDING,
+    ).update(status=Offer.Status.DECLINED, updated_at=timezone.now())
+    return deal
+
+
 def ensure_listing_accepts_offers(listing: Listing) -> None:
     if listing.status != Listing.Status.ACTIVE:
         raise ValidationError("This listing is not accepting offers")
@@ -66,19 +81,7 @@ def transition_offer(offer: Offer, actor, action: str, amount: Decimal | None = 
         raise ValidationError("Offer is no longer pending")
     if action == "accept":
         _claim_pending_offer(offer, Offer.Status.ACCEPTED)
-        if not _move_listing(listing.pk, Listing.Status.ACTIVE, Listing.Status.RESERVED):
-            raise ValidationError("This listing is no longer available")
-        try:
-            with transaction.atomic():
-                Deal.objects.create(
-                    conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
-                )
-        except IntegrityError as exc:  # only reachable with inconsistent legacy data
-            raise ValidationError("This conversation already has a deal") from exc
-        # The listing is reserved now, so every other open offer on it (from any buyer) is moot.
-        Offer.objects.filter(
-            conversation__listing_id=listing.pk, status=Offer.Status.PENDING,
-        ).update(status=Offer.Status.DECLINED, updated_at=timezone.now())
+        _open_deal_for_listing(listing, conversation, offer)
         return offer
     if action == "decline":
         _claim_pending_offer(offer, Offer.Status.DECLINED)
@@ -92,6 +95,26 @@ def transition_offer(offer: Offer, actor, action: str, amount: Decimal | None = 
             conversation=conversation, proposer=actor, amount=amount, currency=offer.currency, counter_to=offer,
         )
     raise ValidationError("Unsupported offer action")
+
+
+@transaction.atomic
+def seller_reserve_listing(conversation: Conversation, seller, amount: Decimal) -> Deal:
+    if seller.id != conversation.seller_id:
+        raise PermissionDenied("Only the seller may reserve this listing for the buyer")
+    if conversation.live_deal() is not None:
+        raise ValidationError("This conversation already has an open deal")
+    listing = lock_listing(conversation.listing_id)
+    ensure_listing_accepts_offers(listing)
+    if amount <= 0:
+        raise ValidationError("Reservation price must be positive")
+    offer = Offer.objects.create(
+        conversation=conversation,
+        proposer=seller,
+        amount=amount,
+        currency=listing.currency,
+        status=Offer.Status.ACCEPTED,
+    )
+    return _open_deal_for_listing(listing, conversation, offer)
 
 
 @transaction.atomic

@@ -37,9 +37,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "display_name", "role",
             "preferred_language", "preferred_currency", "avatar", "location",
-            "bio", "is_verified_seller", "date_joined",
+            "bio", "is_verified_seller", "is_staff", "date_joined",
         )
-        read_only_fields = ("id", "username", "email", "is_verified_seller", "date_joined")
+        read_only_fields = ("id", "username", "email", "is_verified_seller", "is_staff", "date_joined")
         extra_kwargs = {"avatar": {"validators": [validate_image_file_extension, validate_upload_size]}}
 
 
@@ -156,6 +156,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField(max_length=64)
     token = serializers.CharField(max_length=128)
     new_password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
+
+
+class MagicLinkRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class MagicLinkConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
 
 
 class RevocationCheckingRefreshSerializer(TokenRefreshSerializer):
