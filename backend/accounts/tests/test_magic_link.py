@@ -38,6 +38,7 @@ class MagicLinkTests(ApiTestCase):
         self.assertEqual(confirmed.status_code, 200, confirmed.data)
         self.assertIn("access", confirmed.data)
         self.assertEqual(confirmed.data["user"]["email"], "new@example.com")
+        self.assertTrue(confirmed.data["user"]["is_email_verified"])
 
     def test_existing_user_gets_a_link_without_duplicating_the_account(self):
         user = User.objects.create_user(

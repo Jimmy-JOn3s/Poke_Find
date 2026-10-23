@@ -8,5 +8,5 @@ from .models import User
 class PokeFindUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (("PokeFind", {"fields": (
         "display_name", "role", "preferred_language", "preferred_currency",
-        "avatar", "location", "bio", "is_verified_seller",
+        "avatar", "location", "bio", "is_email_verified", "is_verified_seller", "seller_verification_type",
     )}),)

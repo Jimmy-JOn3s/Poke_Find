@@ -13,9 +13,13 @@ from messaging.models import Review
 from messaging.serializers import ReviewSerializer
 
 from .serializers import (
-    EmailOrUsernameTokenObtainPairSerializer, MagicLinkConfirmSerializer, MagicLinkRequestSerializer,
+    EmailOrUsernameTokenObtainPairSerializer, EmailVerificationConfirmSerializer,
+    MagicLinkConfirmSerializer, MagicLinkRequestSerializer,
     PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
     PublicUserProfileSerializer, RegisterSerializer, UserSerializer,
+)
+from .email_verification import (
+    REQUESTED as EMAIL_VERIFICATION_REQUESTED, confirm_email_verification, request_email_verification,
 )
 from .magic_link import REQUESTED as MAGIC_LINK_REQUESTED, confirm_magic_link, request_magic_link
 from .password_reset import confirm_password_reset, request_password_reset
@@ -47,6 +51,10 @@ class RegisterView(AuthAttemptThrottleMixin, generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        try:
+            request_email_verification(user)
+        except EmailDeliveryError:
+            pass
         refresh = RefreshToken.for_user(user)
         return Response({
             "access": str(refresh.access_token),
@@ -145,5 +153,32 @@ class MagicLinkConfirmView(AuthAttemptThrottleMixin, APIView):
         return Response({
             "access": access,
             "refresh": refresh,
+            "user": UserSerializer(user, context={"request": request}).data,
+        })
+
+
+class EmailVerificationRequestView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "email_verification"
+
+    def post(self, request):
+        try:
+            request_email_verification(request.user)
+        except EmailDeliveryError as exc:
+            raise EmailDeliveryFailed(detail=exc.detail)
+        return Response({"detail": EMAIL_VERIFICATION_REQUESTED})
+
+
+class EmailVerificationConfirmView(AuthAttemptThrottleMixin, APIView):
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = ()
+
+    def post(self, request):
+        serializer = EmailVerificationConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = confirm_email_verification(**serializer.validated_data)
+        return Response({
+            "detail": "Email verified.",
             "user": UserSerializer(user, context={"request": request}).data,
         })

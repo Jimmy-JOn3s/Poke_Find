@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from .models import Listing, SavedListing
@@ -60,6 +60,8 @@ class ListingViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        if not self.request.user.is_email_verified:
+            raise PermissionDenied("Verify your email before creating a listing.")
         serializer.save(seller=self.request.user)
 
     def perform_destroy(self, instance):

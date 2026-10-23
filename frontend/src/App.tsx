@@ -13,10 +13,13 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import AdminPage from "./pages/AdminPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import MagicLinkPage from "./pages/MagicLinkPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import { i18n } from "./i18n";
 import { api, mapListing, mapUser, setTokens } from "./lib/api";
 import { useListings } from "./hooks/useListings";
 import { readMagicLink } from "./lib/magicLink";
 import { readResetLink } from "./lib/resetLink";
+import { readVerifyLink } from "./lib/verifyLink";
 
 
 function storedPreference<T extends string>(key: string, fallback: T): T {
@@ -31,9 +34,13 @@ export default function App() {
   // A password-reset email opens the app with the token in the URL fragment (see backend/accounts/password_reset.py).
   const [resetLink, setResetLink] = useState(() => readResetLink(window.location.hash));
   const [magicLink, setMagicLink] = useState(() => readMagicLink(window.location.hash));
-  const [currentPage, setCurrentPage] = useState<Page>(
-    resetLink ? "resetPassword" : magicLink ? "magicLink" : "discover",
-  );
+  const [verifyLink, setVerifyLink] = useState(() => readVerifyLink(window.location.hash));
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    if (resetLink) return "resetPassword";
+    if (magicLink) return "magicLink";
+    if (verifyLink) return "verifyEmail";
+    return "discover";
+  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -58,14 +65,22 @@ export default function App() {
     const openAuthLink = () => {
       const reset = readResetLink(window.location.hash);
       const magic = readMagicLink(window.location.hash);
+      const verify = readVerifyLink(window.location.hash);
       if (reset) {
         setResetLink(reset);
         setMagicLink(null);
+        setVerifyLink(null);
         setCurrentPage("resetPassword");
       } else if (magic) {
         setMagicLink(magic);
         setResetLink(null);
+        setVerifyLink(null);
         setCurrentPage("magicLink");
+      } else if (verify) {
+        setVerifyLink(verify);
+        setResetLink(null);
+        setMagicLink(null);
+        setCurrentPage("verifyEmail");
       } else {
         return;
       }
@@ -112,7 +127,10 @@ export default function App() {
     applyTheme(next);
   };
 
-  const handleAuth = async (role: UserRole, name: string, email: string, password: string, mode: "signin" | "signup") => {
+  const handleAuth = async (
+    role: UserRole, name: string, email: string, password: string, mode: "signin" | "signup",
+    options?: { deferNavigation?: boolean },
+  ) => {
     setAuthLoading(true);
     setAuthError("");
     try {
@@ -129,10 +147,11 @@ export default function App() {
         setTokens(result);
         setCurrentUser(mapUser(await api.me()));
       }
-      setCurrentPage("discover");
+      if (!options?.deferNavigation) setCurrentPage("discover");
       await reload();
     } catch (caught) {
       setAuthError(caught instanceof Error ? caught.message : "Authentication failed");
+      throw caught;
     } finally {
       setAuthLoading(false);
     }
@@ -220,8 +239,25 @@ export default function App() {
           setCurrentPage("discover");
           await reload();
         }} />;
+      case "verifyEmail":
+        if (!verifyLink) return null;
+        return <VerifyEmailPage lang={lang} link={verifyLink} onVerified={async user => {
+          setVerifyLink(null);
+          if (user) {
+            setCurrentUser(user);
+            setCurrentPage("discover");
+            return;
+          }
+          try {
+            setCurrentUser(mapUser(await api.me()));
+            setCurrentPage("discover");
+          } catch {
+            setCurrentPage("auth");
+          }
+        }} />;
       case "auth":
-        return <AuthPage lang={lang} onAuth={handleAuth} error={authError} loading={authLoading} />;
+        return <AuthPage lang={lang} onAuth={handleAuth} onEnterApp={() => setCurrentPage("discover")}
+          error={authError} loading={authLoading} />;
       case "listing":
         if (!selectedListing) return null;
         return <ListingDetailPage listing={selectedListing} lang={lang} currentUser={currentUser}
@@ -253,12 +289,24 @@ export default function App() {
         return <DiscoverPage lang={lang} listings={listings} loading={loading} error={error}
           displayCurrency={currency} onRetry={() => void reload()}
           onSelectListing={listing => { setSelectedListing(listing); setCurrentPage("listing"); }}
-          onCreateListing={() => isAuthenticated ? setShowCreateListing(true) : setCurrentPage("auth")}
+          onCreateListing={() => {
+            if (!isAuthenticated) {
+              setCurrentPage("auth");
+              return;
+            }
+            if (!currentUser?.emailVerified) {
+              setActionError(i18n[lang].verifyEmailBeforeListing);
+              setCurrentPage("settings");
+              return;
+            }
+            setShowCreateListing(true);
+          }}
           isAuthenticated={isAuthenticated} />;
     }
   };
 
-  const showNav = currentPage !== "auth" && currentPage !== "listing" && currentPage !== "resetPassword" && currentPage !== "magicLink";
+  const showNav = currentPage !== "auth" && currentPage !== "listing" && currentPage !== "resetPassword"
+    && currentPage !== "magicLink" && currentPage !== "verifyEmail";
   return (
     <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
       {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{actionError} · ✕</button>}

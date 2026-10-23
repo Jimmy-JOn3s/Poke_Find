@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Listing, AppLang, Currency, User } from '../types';
 import { i18n } from '../i18n';
 import { MOCK_USERS } from '../mockData';
+import { hasPublicVerificationBadge, verificationBadgeLabel } from '../lib/verification';
 import Price from '../components/Price';
 import CardArt from '../components/CardArt';
 import ReportModal from '../components/ReportModal';
@@ -27,8 +28,12 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
   const isOwner = currentUser?.id === listing.sellerId;
   const seller = MOCK_USERS.find(u => u.id === listing.sellerId) || {
     id: listing.sellerId, name: listing.sellerName, avatar: listing.sellerAvatar,
-    role: listing.sellerRole, verified: listing.sellerVerified, rating: listing.sellerRating,
-    reviewCount: 0, totalSold: 0,
+    role: listing.sellerRole, verified: listing.sellerVerificationTier === 'id' || listing.sellerVerificationTier === 'passport',
+    emailVerified: listing.sellerVerificationTier === 'email',
+    sellerVerificationType: listing.sellerVerificationTier === 'passport' ? 'passport' as const : listing.sellerVerificationTier === 'id' ? 'id' as const : '',
+    verificationTier: listing.sellerVerificationTier,
+    rating: listing.sellerRating, reviewCount: 0, totalSold: 0,
+    email: '', joinedDate: '', location: '', bio: '',
   };
 
   const conditionColor = (c: string) =>
@@ -131,8 +136,11 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-display font-bold text-sm text-foreground truncate">{seller.name}</span>
                   {seller.role === 'business' && <span className="badge-business">{t.businessBadge}</span>}
-                  {seller.verified && <span className="badge-verified">✓</span>}
+                  {hasPublicVerificationBadge(seller.verificationTier) && <span className="badge-verified">✓</span>}
                 </div>
+                {seller.verificationTier !== 'none' && (
+                  <p className="text-[10px] text-success mb-0.5">{verificationBadgeLabel(seller.verificationTier, t)}</p>
+                )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                   <span>★ {seller.rating}</span>
                   <span>·</span>

@@ -167,7 +167,7 @@ function ListingCard({ listing, t, lang, displayCurrency, onClick }: { listing: 
         {listing.sellerRole === 'business' && (
           <div className="absolute bottom-1.5 left-1.5 z-30 badge-business">{t.businessBadge}</div>
         )}
-        {listing.sellerVerified && (
+        {listing.sellerVerificationTier !== 'none' && (
           <div className="absolute bottom-1.5 right-1.5 z-30 badge-verified">✓</div>
         )}
       </div>

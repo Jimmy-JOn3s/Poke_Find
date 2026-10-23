@@ -117,6 +117,9 @@ def confirm_magic_link(uid: str, token: str) -> tuple[str, str, User]:
     user = _locked_user(uid)
     if user is None or not _token_valid(user, token):
         raise ValidationError({"detail": INVALID_LINK})
+    if not user.is_email_verified:
+        user.is_email_verified = True
+        user.save(update_fields=["is_email_verified"])
     update_last_login(None, user)
     refresh = RefreshToken.for_user(user)
     return str(refresh.access_token), str(refresh), user

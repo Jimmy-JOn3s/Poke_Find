@@ -160,6 +160,7 @@ REST_FRAMEWORK = {
         "auth": os.getenv("THROTTLE_AUTH_RATE", "10/min"),
         "password_reset": os.getenv("THROTTLE_PASSWORD_RESET_RATE", "10/hour"),
         "magic_link": os.getenv("THROTTLE_MAGIC_LINK_RATE", "10/hour"),
+        "email_verification": os.getenv("THROTTLE_EMAIL_VERIFICATION_RATE", "10/hour"),
     },
     # Number of proxies in front of Django that append to X-Forwarded-For. DRF's default (None)
     # would trust whatever X-Forwarded-For the client sends, letting attackers dodge rate limits.

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AppLang, Currency, User, Listing, Review, ReviewContext } from '../types';
 import { i18n } from '../i18n';
 import { api, mapPublicProfile } from '../lib/api';
+import { hasPublicVerificationBadge, verificationBadgeLabel } from '../lib/verification';
 import Price from '../components/Price';
 import CardArt from '../components/CardArt';
 import ReviewForm from '../components/ReviewForm';
@@ -118,7 +119,7 @@ export default function ProfilePage({
           <div className="w-18 h-18 w-[72px] h-[72px] flex items-center justify-center text-2xl font-bold mb-3 relative"
             style={{ background: 'linear-gradient(135deg, var(--color-secondary), var(--color-accent))', color: '#fff', borderRadius: 8, boxShadow: '3px 3px 0 var(--color-shadow-accent)' }}>
             {profileUser.avatar}
-            {profileUser.verified && (
+            {hasPublicVerificationBadge(profileUser.verificationTier) && (
               <div className="absolute -bottom-1 -right-1 w-6 h-6 flex items-center justify-center text-xs border-2 bg-success text-primary-foreground font-black"
                 style={{ borderColor: 'var(--color-background)', borderRadius: 3 }}>✓</div>
             )}
@@ -130,13 +131,9 @@ export default function ProfilePage({
           </div>
 
           <div className="flex items-center gap-3 text-xs mb-2">
-            {profileUser.verified ? (
-              <span className="font-display flex items-center gap-1 text-success">
-                ✓ {t.verified} {profileUser.verifiedType === 'passport' ? `(${t.passport})` : `(${t.idCard})`}
-              </span>
-            ) : (
-              <span className="font-display opacity-50 text-muted-foreground">○ {t.notVerified}</span>
-            )}
+            <span className={`font-display flex items-center gap-1 ${profileUser.verificationTier === 'none' ? 'opacity-50 text-muted-foreground' : 'text-success'}`}>
+              {verificationBadgeLabel(profileUser.verificationTier, t)}
+            </span>
             {profileUser.location && (
               <>
                 <span className="text-muted-foreground">•</span>

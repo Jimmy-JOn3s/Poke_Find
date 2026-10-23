@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AppLang, Currency, ThemePreference, User } from '../types';
 import { i18n } from '../i18n';
+import { api, isEmailDeliveryFailure } from '../lib/api';
 import LocaleCurrencySwitcher from '../components/LocaleCurrencySwitcher';
 import ThemeSwitcher from '../components/ThemeSwitcher';
 
@@ -20,6 +21,9 @@ interface Props {
 
 export default function SettingsPage({ lang, onLangChange, currency, onCurrencyChange, theme, onThemeChange, currentUser, isAuthenticated, onSignOut, onSignIn, onAdmin }: Props) {
   const t = i18n[lang];
+  const [verifySending, setVerifySending] = useState(false);
+  const [verifySent, setVerifySent] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(false);
   const [chatNotif, setChatNotif] = useState(true);
@@ -80,7 +84,34 @@ export default function SettingsPage({ lang, onLangChange, currency, onCurrencyC
             </div>
             <Row icon="👤" label={t.account} />
             <Row icon="🔒" label={t.security} />
-            <Row icon={currentUser.verified ? '✅' : '🪪'} label={t.verification}
+            <Row icon={currentUser.emailVerified ? '✅' : '📧'} label={t.verification}
+              sublabel={currentUser.emailVerified ? t.emailVerified : t.emailNotVerified}
+              right={!currentUser.emailVerified ? (
+                <button type="button" disabled={verifySending}
+                  onClick={() => void (async () => {
+                    setVerifySending(true);
+                    setVerifyError('');
+                    setVerifySent(false);
+                    try {
+                      await api.requestEmailVerification();
+                      setVerifySent(true);
+                    } catch (caught) {
+                      setVerifyError(caught instanceof Error && isEmailDeliveryFailure(caught)
+                        ? caught.message || t.emailSendFailed
+                        : caught instanceof Error ? caught.message : 'Request failed');
+                    } finally {
+                      setVerifySending(false);
+                    }
+                  })()}
+                  className="text-xs font-bold text-primary shrink-0">
+                  {verifySending ? t.loading : t.resendVerification}
+                </button>
+              ) : undefined} />
+            {verifySent && !currentUser.emailVerified && (
+              <p className="px-4 pb-3 text-xs text-success">✓ {t.linkSentTo} {currentUser.email}</p>
+            )}
+            {verifyError && <p className="px-4 pb-3 text-xs text-danger">{verifyError}</p>}
+            <Row icon={currentUser.verified ? '✅' : '🪪'} label={t.verifyIdentity}
               sublabel={currentUser.verified ? t.verified : t.verifyToSell} />
           </div>
         )}

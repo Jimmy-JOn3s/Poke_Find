@@ -1,4 +1,9 @@
-import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review, UserRole } from "../types";
+import type { CardCondition, CardLanguage, CardRarity, Currency, Listing, Review, UserRole, VerificationTier } from "../types";
+import {
+  hasPublicVerificationBadge,
+  publicVerificationTier,
+  type SellerVerificationType,
+} from "./verification";
 
 
 const ACCESS_TOKEN_KEY = "pokefind.accessToken";
@@ -48,7 +53,9 @@ export interface ApiUser {
   email?: string;
   display_name: string;
   role: UserRole;
+  is_email_verified: boolean;
   is_verified_seller: boolean;
+  seller_verification_type?: SellerVerificationType | "";
   preferred_language?: "th" | "en";
   preferred_currency?: Currency;
   avatar?: string | null;
@@ -82,6 +89,7 @@ export interface AdminUserRow {
   email: string;
   role: UserRole;
   is_staff: boolean;
+  is_email_verified: boolean;
   is_verified_seller: boolean;
   date_joined: string;
 }
@@ -150,7 +158,9 @@ export interface ApiPublicProfile {
   avatar?: string | null;
   location?: string;
   bio?: string;
+  is_email_verified: boolean;
   is_verified_seller: boolean;
+  seller_verification_type?: SellerVerificationType | "";
   date_joined: string;
   rating: number;
   review_count: number;
@@ -181,6 +191,20 @@ export interface ApiConversation {
 
 export type ListingFilters = Partial<Record<"q" | "condition" | "card_language" | "rarity" | "currency" | "min_price" | "max_price", string>>;
 
+export interface ApiVerificationFields {
+  is_email_verified?: boolean;
+  is_verified_seller: boolean;
+  seller_verification_type?: SellerVerificationType | "" | null;
+}
+
+export function verificationTierFromApi(fields: ApiVerificationFields): VerificationTier {
+  return publicVerificationTier({
+    isEmailVerified: Boolean(fields.is_email_verified),
+    isVerifiedSeller: fields.is_verified_seller,
+    sellerVerificationType: fields.seller_verification_type || "",
+  });
+}
+
 export function buildListingQuery(filters: ListingFilters): string {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -201,10 +225,12 @@ export function mapListing(item: ApiListing): Listing {
   const uploadedPhoto = item.photo ? resolveMediaUrl(item.photo) : undefined;
   const catalogImage = item.image_url || undefined;
   const displayImage = uploadedPhoto || catalogImage;
+  const sellerVerificationTier = verificationTierFromApi(item.seller);
   return {
     id: String(item.id), sellerId: String(item.seller.id), sellerName: item.seller.display_name,
     sellerAvatar: item.seller.display_name.slice(0, 1), sellerRole: item.seller.role,
-    sellerVerified: item.seller.is_verified_seller, sellerRating: 5,
+    sellerVerified: hasPublicVerificationBadge(sellerVerificationTier),
+    sellerVerificationTier, sellerRating: 5,
     productName: item.product_name, set: item.set_name, setCode: item.set_code,
     cardNumber: item.card_number, condition: item.condition, language: item.card_language,
     rarity: item.rarity, listedPrice: Number(item.asking_price), currency: item.currency,
@@ -217,9 +243,13 @@ export function mapListing(item: ApiListing): Listing {
 }
 
 export function mapUser(item: ApiUser) {
+  const verificationTier = verificationTierFromApi(item);
   return {
     id: String(item.id), name: item.display_name, email: item.email || "", avatar: item.display_name.slice(0, 1),
-    role: item.role, verified: item.is_verified_seller, rating: 5, reviewCount: 0, totalSold: 0,
+    role: item.role, verified: item.is_verified_seller, emailVerified: item.is_email_verified,
+    sellerVerificationType: (item.seller_verification_type || "") as SellerVerificationType,
+    verificationTier,
+    rating: 5, reviewCount: 0, totalSold: 0,
     joinedDate: new Date().toISOString().slice(0, 10), location: item.location || "", bio: item.bio || "",
     preferredLanguage: item.preferred_language, preferredCurrency: item.preferred_currency,
     isStaff: Boolean(item.is_staff),
@@ -227,9 +257,13 @@ export function mapUser(item: ApiUser) {
 }
 
 export function mapPublicProfile(item: ApiPublicProfile) {
+  const verificationTier = verificationTierFromApi(item);
   return {
     id: String(item.id), name: item.display_name, email: "", avatar: item.display_name.slice(0, 1),
-    role: item.role, verified: item.is_verified_seller, rating: item.rating, reviewCount: item.review_count,
+    role: item.role, verified: item.is_verified_seller, emailVerified: item.is_email_verified,
+    sellerVerificationType: (item.seller_verification_type || "") as SellerVerificationType,
+    verificationTier,
+    rating: item.rating, reviewCount: item.review_count,
     totalSold: item.total_sold, joinedDate: item.date_joined.slice(0, 10), location: item.location || "",
     bio: item.bio || "",
   };
@@ -316,6 +350,7 @@ function listingFormData(payload: Record<string, unknown>, photoFile: File): For
 const CREDENTIAL_PATHS = new Set([
   "/auth/login/", "/auth/register/", "/auth/password-reset/", "/auth/password-reset/confirm/",
   "/auth/magic-link/", "/auth/magic-link/confirm/",
+  "/auth/email-verification/confirm/",
 ]);
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -364,6 +399,12 @@ export const api = {
   },
   confirmMagicLink(uid: string, token: string): Promise<AuthResponse> {
     return request("/auth/magic-link/confirm/", { method: "POST", body: JSON.stringify({ uid, token }) });
+  },
+  requestEmailVerification(): Promise<{ detail: string }> {
+    return request("/auth/email-verification/", { method: "POST", body: JSON.stringify({}) });
+  },
+  confirmEmailVerification(uid: string, token: string): Promise<{ detail: string; user: ApiUser }> {
+    return request("/auth/email-verification/confirm/", { method: "POST", body: JSON.stringify({ uid, token }) });
   },
   confirmPasswordReset(uid: string, token: string, newPassword: string): Promise<{ detail: string }> {
     return request("/auth/password-reset/confirm/", {
