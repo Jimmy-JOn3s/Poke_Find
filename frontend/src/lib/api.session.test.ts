@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, resolveApiBase, setTokens } from "./api";
 
 const API = "http://api.test/api";
-const ME = { id: 1, display_name: "Ash", role: "personal", is_verified_seller: false };
+const ME = { id: 1, display_name: "Ash", role: "personal", is_email_verified: false, is_verified_seller: false };
 
 function memoryStorage(): Storage {
   const data = new Map<string, string>();

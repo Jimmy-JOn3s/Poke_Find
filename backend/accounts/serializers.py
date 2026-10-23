@@ -37,9 +37,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "display_name", "role",
             "preferred_language", "preferred_currency", "avatar", "location",
-            "bio", "is_verified_seller", "is_staff", "date_joined",
+            "bio", "is_email_verified", "is_verified_seller", "seller_verification_type", "is_staff", "date_joined",
         )
-        read_only_fields = ("id", "username", "email", "is_verified_seller", "is_staff", "date_joined")
+        read_only_fields = (
+            "id", "username", "email", "is_email_verified", "is_verified_seller",
+            "seller_verification_type", "is_staff", "date_joined",
+        )
         extra_kwargs = {"avatar": {"validators": [validate_image_file_extension, validate_upload_size]}}
 
 
@@ -49,7 +52,10 @@ class PublicUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "display_name", "role", "avatar", "location", "is_verified_seller")
+        fields = (
+            "id", "display_name", "role", "avatar", "location",
+            "is_email_verified", "is_verified_seller", "seller_verification_type",
+        )
         read_only_fields = fields
 
 
@@ -63,7 +69,8 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "id", "display_name", "role", "avatar", "location", "bio",
-            "is_verified_seller", "date_joined", "rating", "review_count", "total_sold",
+            "is_email_verified", "is_verified_seller", "seller_verification_type",
+            "date_joined", "rating", "review_count", "total_sold",
             "pending_review_deal_id",
         )
         read_only_fields = fields
@@ -163,6 +170,11 @@ class MagicLinkRequestSerializer(serializers.Serializer):
 
 
 class MagicLinkConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField(max_length=64)
     token = serializers.CharField(max_length=128)
 

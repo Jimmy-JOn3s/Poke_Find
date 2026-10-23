@@ -6,7 +6,10 @@ describe("listing API adapter", () => {
   it("maps the backend contract into the existing generated UI model", () => {
     const listing = mapListing({
       id: 7,
-      seller: { id: 2, display_name: "Poke BKK", role: "business", is_verified_seller: true },
+      seller: {
+        id: 2, display_name: "Poke BKK", role: "business",
+        is_email_verified: true, is_verified_seller: true, seller_verification_type: "id",
+      },
       product_name: "Mew ex",
       set_name: "151",
       set_code: "SV2A",
@@ -27,6 +30,7 @@ describe("listing API adapter", () => {
     expect(listing.productName).toBe("Mew ex");
     expect(listing.imageUrl).toContain("tcgdex.net");
     expect(listing.sellerRole).toBe("business");
+    expect(listing.sellerVerificationTier).toBe("id");
     expect(listing.currency).toBe("THB");
     expect(listing.listedPrice).toBe(2100);
   });
@@ -34,7 +38,7 @@ describe("listing API adapter", () => {
   it("prefers uploaded photo URLs over catalog image_url", () => {
     const listing = mapListing({
       id: 1,
-      seller: { id: 1, display_name: "Seller", role: "personal", is_verified_seller: false },
+      seller: { id: 1, display_name: "Seller", role: "personal", is_email_verified: false, is_verified_seller: false },
       product_name: "Test",
       set_name: "Set",
       set_code: "X",

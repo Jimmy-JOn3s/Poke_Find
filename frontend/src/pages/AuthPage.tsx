@@ -5,13 +5,17 @@ import { api, isEmailDeliveryFailure } from '../lib/api';
 
 interface Props {
   lang: AppLang;
-  onAuth: (role: UserRole, name: string, email: string, password: string, mode: 'signin' | 'signup') => Promise<void>;
+  onAuth: (
+    role: UserRole, name: string, email: string, password: string, mode: 'signin' | 'signup',
+    options?: { deferNavigation?: boolean },
+  ) => Promise<void>;
+  onEnterApp?: () => void;
   initialMode?: 'signin' | 'signup';
   error?: string;
   loading?: boolean;
 }
 
-export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, loading }: Props) {
+export default function AuthPage({ lang, onAuth, onEnterApp, initialMode = 'signin', error, loading }: Props) {
   const t = i18n[lang];
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
   const lastTitleTap = useRef<number | null>(null);
@@ -25,10 +29,9 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
   const [magicSent, setMagicSent] = useState(false);
   const [magicSending, setMagicSending] = useState(false);
   const [magicError, setMagicError] = useState('');
-  const [verifyType, setVerifyType] = useState<'id' | 'passport'>('id');
-  const [frontUploaded, setFrontUploaded] = useState(false);
-  const [backUploaded, setBackUploaded] = useState(false);
-  const [verifySubmitted, setVerifySubmitted] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [verifySending, setVerifySending] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
   const [resetSending, setResetSending] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -96,6 +99,32 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
     setForgotOpen(false);
     setResetSent(false);
     setResetError('');
+    setSignupComplete(false);
+    setVerifyError('');
+  };
+
+  const completeSignup = async () => {
+    try {
+      await onAuth(
+        role, name || (lang === 'th' ? 'ผู้ใช้ใหม่' : 'New User'), email, password, 'signup',
+        { deferNavigation: true },
+      );
+      setSignupComplete(true);
+    } catch {
+      // Parent sets error via props
+    }
+  };
+
+  const resendVerification = async () => {
+    setVerifySending(true);
+    setVerifyError('');
+    try {
+      await api.requestEmailVerification();
+    } catch (caught) {
+      setVerifyError(authRequestError(caught));
+    } finally {
+      setVerifySending(false);
+    }
   };
 
   const switchSignInMethod = (next: 'emailLink' | 'password') => {
@@ -323,61 +352,42 @@ export default function AuthPage({ lang, onAuth, initialMode = 'signin', error, 
           </div>
         )}
 
-        {/* Step 3: Verification */}
+        {/* Step 3: Email verification (ID/passport comes later) */}
         {step === 3 && (
           <div className="animate-slide-up">
             <h2 className="font-display text-lg font-bold text-foreground mb-1">{t.verification}</h2>
             <p className="text-muted-foreground text-sm mb-5">{t.verificationDesc}</p>
 
-            {!verifySubmitted ? (
+            {!signupComplete ? (
               <>
-                <div className="flex gap-2 mb-4">
-                  {(['id', 'passport'] as const).map(type => (
-                    <button key={type} onClick={() => setVerifyType(type)}
-                      className={`flex-1 py-2.5 text-sm font-semibold transition-all font-display chip-btn ${verifyType === type ? 'chip-btn-active' : ''}`}>
-                      {type === 'id' ? `🪪 ${t.idCard}` : `📗 ${t.passport}`}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {[
-                    { label: t.uploadFront, done: frontUploaded, onUp: () => setFrontUploaded(true) },
-                    ...(verifyType === 'id' ? [{ label: t.uploadBack, done: backUploaded, onUp: () => setBackUploaded(true) }] : []),
-                  ].map(u => (
-                    <button key={u.label} onClick={u.onUp}
-                      className="aspect-[4/3] flex flex-col items-center justify-center gap-2 text-center p-3 transition-all"
-                      style={{
-                        border: `2px dashed ${u.done ? 'color-mix(in srgb, var(--color-success) 50%, transparent)' : 'var(--color-border)'}`,
-                        borderRadius: 4,
-                        background: u.done ? 'color-mix(in srgb, var(--color-success) 6%, transparent)' : 'var(--color-muted)',
-                      }}>
-                      <div className="text-2xl">{u.done ? '✅' : '📷'}</div>
-                      <span className="text-xs text-muted-foreground">{u.done ? t.uploaded : u.label}</span>
-                    </button>
-                  ))}
-                </div>
-
                 <div className="p-3 mb-5 flex gap-2 text-xs text-muted-foreground detail-stat">
-                  <span>🔒</span><span>{t.secureNote}</span>
+                  <span>📧</span><span>{t.emailVerificationPending}</span>
                 </div>
-
-                <button onClick={() => frontUploaded && setVerifySubmitted(true)}
+                {error && <p className="text-xs mb-3 text-danger">{error}</p>}
+                <button type="button" disabled={loading || !email || password.length < 8}
+                  onClick={() => void completeSignup()}
                   className="w-full py-3 text-sm font-bold mb-2 btn-primary"
-                  style={{ borderRadius: 4, opacity: frontUploaded ? 1 : 0.4, cursor: frontUploaded ? 'pointer' : 'default' }}>
-                  {t.completeVerification}
+                  style={{ borderRadius: 4, opacity: loading || !email || password.length < 8 ? 0.45 : 1 }}>
+                  {loading ? t.loading : t.createAccount}
                 </button>
-                <button onClick={() => void onAuth(role, name || (lang === 'th' ? 'ผู้ใช้ใหม่' : 'New User'), email, password, 'signup')}
+                <button type="button" onClick={() => setStep(2)}
                   className="w-full py-2.5 text-sm text-muted-foreground" style={{ fontFamily: "'Sarabun', sans-serif" }}>
-                  {t.skipForNow}
+                  ← {t.back}
                 </button>
               </>
             ) : (
-              <div className="flex flex-col items-center py-8">
-                <div className="text-5xl mb-4">⏳</div>
-                <h3 className="font-display text-lg font-bold text-foreground mb-2">{t.pending}</h3>
-                <p className="text-muted-foreground text-sm text-center mb-6">{t.pendingDesc}</p>
-                <button onClick={() => void onAuth(role, name || (lang === 'th' ? 'ผู้ใช้ใหม่' : 'New User'), email, password, 'signup')}
+              <div className="flex flex-col items-center py-4">
+                <div className="w-full py-3.5 text-sm text-center mb-4"
+                  style={{ background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: 4, color: '#00E676' }}>
+                  ✓ {t.linkSentTo} {email}
+                </div>
+                <p className="text-muted-foreground text-sm text-center mb-4">{t.emailVerificationPending}</p>
+                {verifyError && <p className="text-xs mb-3 text-danger">{verifyError}</p>}
+                <button type="button" disabled={verifySending} onClick={() => void resendVerification()}
+                  className="w-full py-2 text-xs text-primary mb-4">
+                  {verifySending ? t.loading : t.resendVerification}
+                </button>
+                <button type="button" onClick={() => onEnterApp?.()}
                   className="px-8 py-3 text-sm font-bold btn-primary" style={{ borderRadius: 4 }}>
                   {t.startUsing} →
                 </button>

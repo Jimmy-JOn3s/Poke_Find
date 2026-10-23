@@ -6,6 +6,8 @@ export type AppLang = 'th' | 'en';
 export type Currency = 'THB' | 'USD';
 export type { ThemePreference } from './lib/theme';
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'ultra' | 'secret';
+export type { VerificationTier, SellerVerificationType } from './lib/verification';
+import type { VerificationTier } from './lib/verification';
 
 export interface User {
   id: string;
@@ -13,8 +15,11 @@ export interface User {
   email: string;
   avatar: string;
   role: UserRole;
+  /** Identity verified (admin/KYC); distinct from public badge tier. */
   verified: boolean;
-  verifiedType?: 'id' | 'passport';
+  emailVerified: boolean;
+  sellerVerificationType?: '' | 'id' | 'passport';
+  verificationTier: VerificationTier;
   rating: number;
   reviewCount: number;
   totalSold: number;
@@ -32,7 +37,9 @@ export interface Listing {
   sellerName: string;
   sellerAvatar: string;
   sellerRole: UserRole;
+  /** @deprecated Use sellerVerificationTier for display. True when any public badge applies. */
   sellerVerified: boolean;
+  sellerVerificationTier: VerificationTier;
   sellerRating: number;
   productName: string;
   set: string;
@@ -109,4 +116,4 @@ export interface ReviewContext {
   revieweeName: string;
 }
 
-export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'admin' | 'resetPassword'| 'magicLink';
+export type Page = 'discover' | 'chat' | 'auth' | 'listing' | 'settings' | 'profile' | 'analytics' | 'admin' | 'resetPassword' | 'magicLink' | 'verifyEmail';

@@ -24,7 +24,15 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to="avatars/", blank=True)
     location = models.CharField(max_length=120, blank=True)
     bio = models.TextField(blank=True)
+    class SellerVerificationType(models.TextChoices):
+        ID = "id", "National ID"
+        PASSPORT = "passport", "Passport"
+
     is_verified_seller = models.BooleanField(default=False)
+    seller_verification_type = models.CharField(
+        max_length=16, choices=SellerVerificationType.choices, blank=True, default="",
+    )
+    is_email_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return self.display_name or self.username

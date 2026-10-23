@@ -42,7 +42,8 @@ class Command(BaseCommand):
             defaults={
                 "email": "seller@pokefind.local", "display_name": "PokeFind BKK",
                 "role": "business", "preferred_language": "th", "preferred_currency": "THB",
-                "is_verified_seller": True, "location": "Bangkok",
+                "is_email_verified": True, "is_verified_seller": True,
+                "seller_verification_type": "id", "location": "Bangkok",
             },
         )
         seller.set_password(password)
@@ -52,7 +53,7 @@ class Command(BaseCommand):
             defaults={
                 "email": "buyer@pokefind.local", "display_name": "Mew Collector",
                 "role": "personal", "preferred_language": "en", "preferred_currency": "USD",
-                "location": "Chiang Mai",
+                "is_email_verified": True, "location": "Chiang Mai",
             },
         )
         buyer.set_password(password)
