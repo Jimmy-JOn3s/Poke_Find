@@ -17,7 +17,7 @@ From the repository root, with the local backend environment configured:
 ```
 
 Tests cover direct reservations, accepted offers, listing edits, protected
-deletion, legacy backfill, completion timestamps, and read-only admin fields.
+deletion and completion timestamps. A separate migration test covers legacy backfill.
 Django creates a separate test database; the local PostgreSQL role needs
 `CREATEDB` for these tests. Do not grant that privilege to production app roles.
 
@@ -28,9 +28,9 @@ Django creates a separate test database; the local PostgreSQL role needs
    separate browser sessions. Use your configured demo password.
 2. Start a conversation about an active listing. Make an offer as the buyer and
    accept it as the seller, or reserve directly from seller chat.
-3. Open Django admin's **Deals** list as a staff user. The card name, set,
-   condition, and agreed price should match the deal, not necessarily the asking
-   price. The snapshot fields are read-only in admin.
+3. Open a deal in Django admin as a staff user. The card name, set, condition,
+   and agreed price should match the deal, not necessarily the asking price.
+   Deal uses the default admin registration, like the other messaging models.
 4. Confirm completion as one party: the deal should remain accepted. Confirm as
    the other party: it should become completed with a completion date.
 5. In a business user's profile, open Analytics. It should show localized
@@ -48,8 +48,8 @@ Inspect completed observations directly if needed:
   reconstruct historical edits; backfilled records are best-effort snapshots.
 - Existing deal/offer relationships protect traded listings from deletion.
   This branch does not make deals independent of those relationships.
-- Read-only admin fields and the service flow protect normal edits, but snapshots
-  are not immutable at the database level; direct ORM/SQL updates can change them.
+- The service flow preserves snapshots across listing edits, but authorized admin
+  edits and direct ORM/SQL updates can change them. They are not immutable.
 - Demo trades are synthetic. They must not be presented as real market observations.
 - Name/set/condition alone do not uniquely identify a collectible. A future market
   dataset needs card number, print language, variant/grading, quantity, provenance,
