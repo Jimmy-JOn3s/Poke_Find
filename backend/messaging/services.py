@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from marketplace.models import Listing
@@ -38,14 +38,14 @@ def _claim_pending_offer(offer: Offer, new_status: str) -> None:
 
 
 def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: Offer) -> Deal:
+    if Deal.objects.filter(conversation=conversation, status__in=LIVE_DEAL_STATUSES).exists():
+        raise ValidationError("This conversation already has an open deal")
     if not _move_listing(listing.pk, Listing.Status.ACTIVE, Listing.Status.RESERVED):
         raise ValidationError("This listing is no longer available")
-    try:
-        deal = Deal.objects.create(
-            conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
-        )
-    except IntegrityError as exc:
-        raise ValidationError("This conversation already has a deal") from exc
+    deal = Deal.objects.create(
+        conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
+        card_name=listing.product_name, card_set=listing.set_name, condition=listing.condition,
+    )
     Offer.objects.filter(
         conversation__listing_id=listing.pk, status=Offer.Status.PENDING,
     ).update(status=Offer.Status.DECLINED, updated_at=timezone.now())

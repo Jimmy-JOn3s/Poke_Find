@@ -34,7 +34,7 @@ export default function DiscoverPage({ lang, onSelectListing, onCreateListing, i
   };
 
   const filtered = useMemo(() => {
-    let list = [...listings];
+    let list = listings.filter(l => l.status === 'active');
     if (search) list = list.filter(l => l.productName.toLowerCase().includes(search.toLowerCase()) || l.set.toLowerCase().includes(search.toLowerCase()));
     if (filterCondition) list = list.filter(l => l.condition === filterCondition);
     if (filterLang) list = list.filter(l => l.language === filterLang);

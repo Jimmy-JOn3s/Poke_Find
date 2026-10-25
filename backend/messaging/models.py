@@ -66,6 +66,12 @@ class Deal(models.Model):
     accepted_offer = models.OneToOneField(Offer, on_delete=models.PROTECT, related_name="deal")
     final_price = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=Listing.Currency.choices)
+    # Snapshot of the traded card, copied from the listing when the deal is created, so the
+    # completed-deal record is independent of later listing edits. Existing deal/offer
+    # relationships protect traded listings from deletion. These snapshots support future price data.
+    card_name = models.CharField(max_length=180, blank=True)
+    card_set = models.CharField(max_length=180, blank=True)
+    condition = models.CharField(max_length=2, choices=Listing.Condition.choices, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACCEPTED)
     buyer_confirmed = models.BooleanField(default=False)
     seller_confirmed = models.BooleanField(default=False)
