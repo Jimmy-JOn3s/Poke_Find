@@ -165,6 +165,7 @@ export default function App() {
   };
 
   const handleNav = (page: Page) => {
+    if (page === "discover" || page === "profile") void reload();
     setConversationId(null);
     setSelectedListing(null);
     setViewUserId(undefined);
