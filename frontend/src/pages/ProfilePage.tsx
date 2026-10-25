@@ -177,7 +177,7 @@ export default function ProfilePage({
               <div className="text-xl">📊</div>
               <div className="text-left">
                 <p className="font-display font-semibold text-sm text-foreground">{t.analyticsTitle}</p>
-                <p className="text-xs text-muted-foreground">{t.businessOnly}</p>
+                <p className="text-xs text-muted-foreground">{t.comingSoon}</p>
               </div>
             </div>
             <span className="font-pixel text-[10px] text-primary">→</span>

@@ -43,6 +43,7 @@ def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: 
     try:
         deal = Deal.objects.create(
             conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
+            card_name=listing.product_name, card_set=listing.set_name, condition=listing.condition,
         )
     except IntegrityError as exc:
         raise ValidationError("This conversation already has a deal") from exc
