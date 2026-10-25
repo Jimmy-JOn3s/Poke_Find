@@ -67,8 +67,8 @@ class Deal(models.Model):
     final_price = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=Listing.Currency.choices)
     # Snapshot of the traded card, copied from the listing when the deal is created, so the
-    # completed-deal record survives later edits or deletion of the listing. This immutable
-    # (price, card, condition, date) row is the basis for future Thai Market Price data.
+    # completed-deal record is independent of later listing edits. Existing deal/offer
+    # relationships protect traded listings from deletion. These snapshots support future price data.
     card_name = models.CharField(max_length=180, blank=True)
     card_set = models.CharField(max_length=180, blank=True)
     condition = models.CharField(max_length=2, choices=Listing.Condition.choices, blank=True)

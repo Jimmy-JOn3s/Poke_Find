@@ -15,6 +15,7 @@ class DealAdmin(admin.ModelAdmin):
     search_fields = ("card_name", "card_set")
     date_hierarchy = "completed_at"
     ordering = ("-completed_at",)
+    readonly_fields = ("card_name", "card_set", "condition", "final_price", "currency", "completed_at")
 
 
 admin.site.register(Conversation)
