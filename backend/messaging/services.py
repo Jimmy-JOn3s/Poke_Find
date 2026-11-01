@@ -48,7 +48,7 @@ def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: 
     )
     Offer.objects.filter(
         conversation__listing_id=listing.pk, status=Offer.Status.PENDING,
-    ).update(status=Offer.Status.DECLINED, updated_at=timezone.now())
+    ).update(status=Offer.Status.DECLINED, declined_by_deal=deal, updated_at=timezone.now())
     return deal
 
 
@@ -150,7 +150,10 @@ def cancel_deal(deal: Deal, actor) -> Deal:
         raise ValidationError("Only an open deal that nobody has confirmed yet can be cancelled")
     # Put the card back on sale unless another live deal still holds it (possible only with legacy data).
     if not Deal.objects.filter(conversation__listing_id=conversation.listing_id, status__in=LIVE_DEAL_STATUSES).exists():
-        _move_listing(conversation.listing_id, Listing.Status.RESERVED, Listing.Status.ACTIVE)
+        if _move_listing(conversation.listing_id, Listing.Status.RESERVED, Listing.Status.ACTIVE):
+            Offer.objects.filter(
+                declined_by_deal=deal, status=Offer.Status.DECLINED,
+            ).update(status=Offer.Status.PENDING, declined_by_deal=None, updated_at=timezone.now())
     return Deal.objects.select_related("conversation").get(pk=deal.pk)
 
 
