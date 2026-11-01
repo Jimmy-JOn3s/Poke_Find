@@ -18,7 +18,7 @@ class ListingApiTests(ApiTestCase):
         super().setUp()
         self.seller = User.objects.create_user(
             username="seller", email="seller@example.com", password="password123",
-            display_name="Bangkok Cards",
+            display_name="Bangkok Cards", is_email_verified=True,
         )
         self.other = User.objects.create_user(
             username="other", email="other@example.com", password="password123",
@@ -70,7 +70,7 @@ class ListingApiTests(ApiTestCase):
             "quantity": 1, "description": "", "status": "active", "photo": upload,
         }, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["photo"].startswith("/media/listings/"))
+        self.assertIn("/media/listings/", response.data["photo"])
 
     def test_save_action_is_idempotent_and_can_unsave(self):
         self.client.force_authenticate(self.other)

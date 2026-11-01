@@ -18,6 +18,7 @@ VERIFY_LINK = re.compile(
 @override_settings(FRONTEND_URL="https://app.example.com")
 class EmailVerificationTests(ApiTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(
             username="mai",
             email="mai@example.com",
@@ -118,7 +119,7 @@ class EmailVerificationTests(ApiTestCase):
 
     def test_a_failed_send_returns_an_error(self):
         self.client.force_authenticate(self.user)
-        with mock.patch("accounts.email_verification.send_transactional_email", side_effect=OSError("down")), \
+        with mock.patch("common.transactional_email.send_mail", side_effect=OSError("down")), \
                 self.assertLogs("common.transactional_email", "ERROR"):
             failed = self.client.post("/api/auth/email-verification/", {}, format="json")
         self.assertEqual(failed.status_code, 503)

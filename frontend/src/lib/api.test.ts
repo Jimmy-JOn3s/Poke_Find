@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { buildListingQuery, mapListing, resolveMediaUrl } from "./api";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildListingQuery, mapListing } from "./api";
 
 
 describe("listing API adapter", () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
   it("maps the backend contract into the existing generated UI model", () => {
     const listing = mapListing({
       id: 7,
@@ -36,6 +38,7 @@ describe("listing API adapter", () => {
   });
 
   it("prefers uploaded photo URLs over catalog image_url", () => {
+    vi.stubEnv("VITE_API_URL", "https://api.example.com/api");
     const listing = mapListing({
       id: 1,
       seller: { id: 1, display_name: "Seller", role: "personal", is_email_verified: false, is_verified_seller: false },
@@ -56,7 +59,7 @@ describe("listing API adapter", () => {
       is_saved: false,
       photo: "/media/listings/card.png",
     });
-    expect(listing.imageUrl).toBe(resolveMediaUrl("/media/listings/card.png"));
+    expect(listing.imageUrl).toBe("https://api.example.com/media/listings/card.png");
     expect(listing.imageUrl).not.toContain("tcgdex");
   });
 
