@@ -64,7 +64,7 @@ class MagicLinkTests(ApiTestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_a_failed_send_returns_an_error_and_can_be_retried(self):
-        with mock.patch("accounts.magic_link.send_transactional_email", side_effect=OSError("down")), \
+        with mock.patch("common.transactional_email.send_mail", side_effect=OSError("down")), \
                 self.assertLogs("common.transactional_email", "ERROR"):
             failed = self.request_link()
         self.assertEqual(failed.status_code, 503)
