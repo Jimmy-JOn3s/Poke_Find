@@ -32,6 +32,13 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     cancel: "ยกเลิก",
     submitOffer: "ส่งข้อเสนอ",
     unavailable: "การ์ดนี้ไม่เปิดรับข้อเสนอแล้ว",
+    dealInProgress: "ดีลกำลังดำเนินการ",
+    dealBothConfirmHint: "เมื่อชำระเงินและส่งมอบการ์ดแล้ว ทั้งผู้ซื้อและผู้ขายต้องกดยืนยัน",
+    dealYourTurn: "อีกฝ่ายยืนยันแล้ว — กดยืนยันเมื่อคุณเสร็จขั้นตอนของคุณ",
+    dealWaiting: "คุณยืนยันแล้ว — รอ",
+    dealWaitingSuffix: "ยืนยันว่าซื้อขายสำเร็จ",
+    dealCompleted: "ซื้อขายสำเร็จแล้ว",
+    youConfirmed: "คุณยืนยันแล้ว",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
@@ -49,6 +56,13 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     cancel: "Cancel",
     submitOffer: "Submit offer",
     unavailable: "This card is no longer accepting offers.",
+    dealInProgress: "Deal in progress",
+    dealBothConfirmHint: "After payment and handoff, both buyer and seller must confirm.",
+    dealYourTurn: "The other party confirmed — confirm when you have finished on your side.",
+    dealWaiting: "You confirmed — waiting for",
+    dealWaitingSuffix: "to confirm the trade is complete.",
+    dealCompleted: "Trade completed",
+    youConfirmed: "You confirmed",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -77,6 +91,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
+  const [confirmingDeal, setConfirmingDeal] = useState(false);
 
   const maybePromptReview = (deal: ApiDeal) => {
     if (deal.status !== "completed" || deal.reviewer_has_reviewed === true || !deal.counterparty_id) return;
@@ -88,13 +103,16 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   };
 
   const confirmCompletion = async () => {
-    if (!active?.deal) return;
+    if (!active?.deal || confirmingDeal) return;
+    setConfirmingDeal(true);
     try {
       const deal = await api.confirmDeal(active.deal.id);
       await loadThreads();
       maybePromptReview(deal);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
+    } finally {
+      setConfirmingDeal(false);
     }
   };
 
@@ -217,6 +235,17 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const listingOpen = active != null && !active.deal && active.listing.status === "active";
   const canReserve = isSeller && listingOpen;
   const canMakeOffer = isBuyer && listingOpen;
+  const openDeal = active?.deal?.status === "accepted" ? active.deal : null;
+  const userId = currentUser != null ? Number(currentUser.id) : null;
+  const myDealConfirmed = openDeal != null && userId != null && (
+    active!.buyer.id === userId ? openDeal.buyer_confirmed : openDeal.seller_confirmed
+  );
+  const theirDealConfirmed = openDeal != null && userId != null && (
+    active!.buyer.id === userId ? openDeal.seller_confirmed : openDeal.buyer_confirmed
+  );
+  const canConfirmDeal = openDeal != null && !myDealConfirmed;
+  const canCancelDeal = openDeal != null && !openDeal.buyer_confirmed && !openDeal.seller_confirmed;
+  const counterpartyForDeal = active?.deal?.counterparty_name || (active ? threadLabel(active) : "");
 
   return (
     <div className="flex flex-col h-full min-h-0 pixel-bg">
@@ -328,7 +357,50 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
               </div>
             )}
             <div className="p-3 md:p-4 space-y-2 max-w-3xl w-full">
-            {!listingOpen && <p className="text-xs text-muted-foreground">{copy.unavailable}</p>}
+            {!listingOpen && !active.deal && (
+              <p className="text-xs text-muted-foreground">{copy.unavailable}</p>
+            )}
+            {openDeal && (
+              <div className="p-3 space-y-2 offer-card" role="status">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-bold text-foreground">{copy.dealInProgress}</p>
+                  <span className="text-xs font-mono text-primary shrink-0">
+                    {formatMoney(Number(openDeal.final_price), openDeal.currency, lang)}
+                  </span>
+                </div>
+                {myDealConfirmed && !theirDealConfirmed && (
+                  <p className="text-xs text-muted-foreground">
+                    {copy.dealWaiting}{" "}
+                    <span className="font-semibold text-foreground">{counterpartyForDeal}</span>{" "}
+                    {copy.dealWaitingSuffix}
+                  </p>
+                )}
+                {!myDealConfirmed && theirDealConfirmed && (
+                  <p className="text-xs text-muted-foreground">{copy.dealYourTurn}</p>
+                )}
+                {!myDealConfirmed && !theirDealConfirmed && (
+                  <p className="text-xs text-muted-foreground">{copy.dealBothConfirmHint}</p>
+                )}
+                {canConfirmDeal && (
+                  <button type="button" disabled={confirmingDeal} onClick={() => void confirmCompletion()}
+                    className="w-full py-2 text-xs text-success font-bold"
+                    style={{ border: "1px solid color-mix(in srgb, var(--color-success) 40%, transparent)" }}>
+                    {copy.complete}
+                  </button>
+                )}
+                {myDealConfirmed && !theirDealConfirmed && (
+                  <p className="text-[10px] text-muted-foreground font-mono">{copy.youConfirmed}</p>
+                )}
+                {canCancelDeal && (
+                  <button type="button" onClick={() => void cancelDeal()} className="w-full py-2 text-xs btn-danger-outline">
+                    {copy.cancelDeal}
+                  </button>
+                )}
+              </div>
+            )}
+            {active.deal?.status === "completed" && (
+              <p className="text-xs font-bold text-success px-1" role="status">{copy.dealCompleted}</p>
+            )}
             <div className="flex gap-2">
               <input value={body} onChange={event => setBody(event.target.value)}
                 onKeyDown={event => event.key === "Enter" && !event.nativeEvent.isComposing && void sendMessage()}
@@ -336,18 +408,6 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                 className="flex-1 min-w-0 field-input text-sm" />
               <button disabled={sending || !body.trim() || threadLoading} onClick={() => void sendMessage()} className="btn-primary px-3 text-xs shrink-0">{copy.send}</button>
             </div>
-            {active.deal && active.deal.status !== "completed" && (
-              <button onClick={() => void confirmCompletion()}
-                className="w-full py-2 text-xs text-success"
-                style={{ border: "1px solid color-mix(in srgb, var(--color-success) 40%, transparent)" }}>
-                {copy.complete}
-              </button>
-            )}
-            {active.deal && active.deal.status === "accepted" && !active.deal.buyer_confirmed && !active.deal.seller_confirmed && (
-              <button onClick={() => void cancelDeal()} className="w-full py-2 text-xs btn-danger-outline">
-                {copy.cancelDeal}
-              </button>
-            )}
             {active.deal && active.deal.status === "completed" && active.deal.reviewer_has_reviewed !== true && active.deal.counterparty_id && (
               <button
                 onClick={() => onLeaveReview({
