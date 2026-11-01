@@ -81,7 +81,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           {/* Title row */}
           <div className="flex items-start justify-between gap-3 mb-1">
             <h1 className="font-display text-lg font-bold text-foreground leading-tight flex-1">{listing.productName}</h1>
-            {isOwner && (
+            {isOwner ? (
               <div className="flex gap-1.5 shrink-0">
                 <button onClick={() => onEditListing?.(listing)}
                   className="px-2.5 py-1 text-xs font-bold font-display chip-btn-outline">
@@ -92,6 +92,11 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
                   {t.deleteListing}
                 </button>
               </div>
+            ) : (
+              <button type="button" onClick={() => setShowReport(true)}
+                className="px-2.5 py-1 text-xs font-bold font-display btn-danger-outline shrink-0">
+                {t.report}
+              </button>
             )}
           </div>
           <p className="text-muted-foreground text-sm mb-3 font-mono">{listing.set} · #{listing.cardNumber}</p>
@@ -160,14 +165,6 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
             <span>👁 {listing.views}</span>
             <span>·</span>
             <span>{t.postedOn} {listing.createdAt}</span>
-            {!isOwner && (
-              <>
-                <span>·</span>
-                <button type="button" onClick={() => setShowReport(true)} className="text-danger underline underline-offset-2 font-display">
-                  {t.report}
-                </button>
-              </>
-            )}
           </div>
 
           {/* CTA — inline on desktop */}
