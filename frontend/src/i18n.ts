@@ -96,6 +96,7 @@ const th = {
   avgRating: 'คะแนนเฉลี่ย', topCards: 'การ์ดขายดี', recentSales: 'การขายล่าสุด',
   lastSixMonths: '6 เดือนล่าสุด', perMonth: 'ครั้ง/เดือน', avgTx: 'เฉลี่ย',
   txCount: 'จำนวนธุรกรรม',
+  comingSoon: 'เร็ว ๆ นี้', comingSoonHint: 'หน้าวิเคราะห์ยอดขายจะเปิดใช้งานเมื่อมีข้อมูลการขายจริง',
 
   // General
   baht: '฿', save: 'บันทึก', cancel: 'ยกเลิก', confirm: 'ยืนยัน', back: 'กลับ', next: 'ถัดไป',
@@ -220,6 +221,7 @@ const en: typeof th = {
   avgRating: 'Avg Rating', topCards: 'Top Selling Cards', recentSales: 'Recent Sales',
   lastSixMonths: 'Last 6 months', perMonth: '/month', avgTx: 'avg',
   txCount: 'Transaction Count',
+  comingSoon: 'Coming soon', comingSoonHint: 'Sales analytics will open once there is real transaction data to show.',
 
   baht: '฿', save: 'Save', cancel: 'Cancel', confirm: 'Confirm', back: 'Back', next: 'Next',
   submit: 'Submit', loading: 'Loading...', sold: 'Sold', available: 'Available',

@@ -23,6 +23,12 @@ export function useListings(filters: ListingFilters = {}) {
 
   useEffect(() => { void reload(); }, [reload]);
 
+  useEffect(() => {
+    const refresh = () => { void reload(); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [reload]);
+
   const create = async (payload: Record<string, unknown>, photoFile?: File | null) => {
     const item = mapListing(await api.createListing(payload, photoFile));
     setListings(current => [item, ...current]);

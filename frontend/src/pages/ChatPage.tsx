@@ -22,6 +22,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     decline: "ปฏิเสธ", complete: "ยืนยันว่าซื้อขายสำเร็จ", retry: "ลองอีกครั้ง",
     cancelDeal: "ยกเลิกดีล",
     reserve: "จองการ์ดให้ผู้ซื้อ", reserveHint: "ราคาที่ตกลง (ว่าง = ราคาประกาศ)",
+    unavailable: "การ์ดนี้ไม่เปิดรับข้อเสนอแล้ว",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
@@ -29,6 +30,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     decline: "Decline", complete: "Confirm completed trade", retry: "Try again",
     cancelDeal: "Cancel deal",
     reserve: "Reserve card for buyer", reserveHint: "Agreed price (leave blank for listed price)",
+    unavailable: "This card is no longer accepting offers.",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -178,7 +180,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   }).sort((a, b) => Date.parse(b.latest_message?.created_at || b.updated_at) - Date.parse(a.latest_message?.created_at || a.updated_at));
   const timeLabel = (date: string) => new Intl.DateTimeFormat(lang === "th" ? "th-TH" : "en-US", { month: "short", day: "numeric" }).format(new Date(date));
   const isSeller = active != null && currentUser != null && active.seller.id === Number(currentUser.id);
-  const canReserve = isSeller && !active?.deal && active.listing.status === "active";
+  const canOffer = active != null && !active.deal && active.listing.status === "active";
+  const canReserve = isSeller && canOffer;
 
   return (
     <div className="flex flex-col h-full min-h-0 pixel-bg">
@@ -263,7 +266,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                   <b className="text-primary">{formatMoney(Number(offer.amount), offer.currency, lang)}</b>
                 </div>
                 <p className="text-[10px] text-muted-foreground">{offer.proposer.display_name} · {offer.status}</p>
-                {offer.status === "pending" && offer.proposer.id !== Number(currentUser?.id) && (
+                {canOffer && offer.status === "pending" && offer.proposer.id !== Number(currentUser?.id) && (
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => void actOnOffer(offer, "accept")} className="btn-primary px-3 py-1 text-xs">{copy.accept}</button>
                     <button onClick={() => void actOnOffer(offer, "decline")} className="px-3 py-1 text-xs btn-danger-outline">{copy.decline}</button>
@@ -282,13 +285,16 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                 <button onClick={() => void reserveForBuyer()} className="btn-primary px-3 text-xs shrink-0">{copy.reserve}</button>
               </div>
             )}
-            <div className="flex gap-2">
-              <input value={offerAmount} onChange={event => setOfferAmount(event.target.value)} type="number"
-                aria-label={`${copy.offer} (${active.listing.currency})`}
-                placeholder={`${copy.offer} (${active.listing.currency})`}
-                className="flex-1 min-w-0 field-input text-sm" />
-              <button onClick={() => void makeOffer()} className="btn-primary px-3 text-xs shrink-0">{copy.offer}</button>
-            </div>
+            {canOffer && (
+              <div className="flex gap-2">
+                <input value={offerAmount} onChange={event => setOfferAmount(event.target.value)} type="number"
+                  aria-label={`${copy.offer} (${active.listing.currency})`}
+                  placeholder={`${copy.offer} (${active.listing.currency})`}
+                  className="flex-1 min-w-0 field-input text-sm" />
+                <button onClick={() => void makeOffer()} className="btn-primary px-3 text-xs shrink-0">{copy.offer}</button>
+              </div>
+            )}
+            {!canOffer && <p className="text-xs text-muted-foreground">{copy.unavailable}</p>}
             <div className="flex gap-2">
               <input value={body} onChange={event => setBody(event.target.value)}
                 onKeyDown={event => event.key === "Enter" && !event.nativeEvent.isComposing && void sendMessage()}

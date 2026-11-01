@@ -1,6 +1,8 @@
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 
 from common.testing import ApiTestCase
 from marketplace.models import Listing
@@ -84,6 +86,24 @@ class DealIntegrityTests(ApiTestCase):
         self.assertEqual(Offer.objects.get(pk=second).status, Offer.Status.DECLINED)
         self.assertEqual(self.accept(second).status_code, 400)
         self.assertEqual(Deal.objects.count(), 1)
+
+    def test_existing_deal_is_rejected_even_if_listing_was_reactivated(self):
+        self.accept(self.offer(self.buyer, self.conversation).data["id"])
+        Listing.objects.filter(pk=self.listing.pk).update(status=Listing.Status.ACTIVE)
+        offer_id = self.offer(self.buyer, self.conversation).data["id"]
+        response = self.accept(offer_id)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("This conversation already has an open deal", str(response.data))
+        self.assertEqual(Deal.objects.count(), 1)
+        self.assertEqual(Offer.objects.get(pk=offer_id).status, Offer.Status.PENDING)
+
+    def test_other_database_errors_are_not_reported_as_an_existing_deal(self):
+        offer_id = self.offer(self.buyer, self.conversation).data["id"]
+        with mock.patch("messaging.services.Deal.objects.create", side_effect=IntegrityError("Missing required field")):
+            with self.assertRaisesMessage(IntegrityError, "Missing required field"):
+                self.accept(offer_id)
+        self.assertEqual(self.listing_status(), Listing.Status.ACTIVE)
+        self.assertEqual(Offer.objects.get(pk=offer_id).status, Offer.Status.PENDING)
 
     def test_a_listing_cannot_be_sold_twice(self):
         self.accept(self.offer(self.buyer, self.conversation).data["id"])
