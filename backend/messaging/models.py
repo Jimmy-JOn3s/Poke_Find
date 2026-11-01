@@ -49,6 +49,10 @@ class Offer(models.Model):
     currency = models.CharField(max_length=3, choices=Listing.Currency.choices)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     counter_to = models.OneToOneField("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="counter_offer")
+    # Set when a pending offer is auto-declined because another conversation opened a deal on this listing.
+    declined_by_deal = models.ForeignKey(
+        "Deal", null=True, blank=True, on_delete=models.SET_NULL, related_name="superseded_offers",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

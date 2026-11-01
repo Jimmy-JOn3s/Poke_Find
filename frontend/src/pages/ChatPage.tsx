@@ -21,7 +21,16 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     type: "พิมพ์ข้อความ...", send: "ส่ง", offer: "เสนอราคา", accept: "ยอมรับ",
     decline: "ปฏิเสธ", complete: "ยืนยันว่าซื้อขายสำเร็จ", retry: "ลองอีกครั้ง",
     cancelDeal: "ยกเลิกดีล",
-    reserve: "จองการ์ดให้ผู้ซื้อ", reserveHint: "ราคาที่ตกลง (ว่าง = ราคาประกาศ)",
+    reserve: "จองการ์ดให้ผู้ซื้อ",
+    offerModalTitle: "เสนอราคา",
+    offerModalBody: "ใส่ราคาที่คุณต้องการเสนอ ผู้ขายสามารถยอมรับ ปฏิเสธ หรือต่อรองได้",
+    offerAmountLabel: "ราคาที่เสนอ",
+    reserveModalTitle: "จองการ์ดให้ผู้ซื้อ?",
+    reserveModalBody: "จองการ์ดนี้ให้",
+    reserveModalFoot: "ในราคาประกาศ การ์ดจะไม่แสดงในหน้าค้นหาจนกว่าดีลจะสำเร็จหรือถูกยกเลิก",
+    confirmReserve: "จองการ์ด",
+    cancel: "ยกเลิก",
+    submitOffer: "ส่งข้อเสนอ",
     unavailable: "การ์ดนี้ไม่เปิดรับข้อเสนอแล้ว",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
@@ -29,7 +38,16 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     type: "Type a message...", send: "Send", offer: "Make offer", accept: "Accept",
     decline: "Decline", complete: "Confirm completed trade", retry: "Try again",
     cancelDeal: "Cancel deal",
-    reserve: "Reserve card for buyer", reserveHint: "Agreed price (leave blank for listed price)",
+    reserve: "Reserve card for buyer",
+    offerModalTitle: "Make an offer",
+    offerModalBody: "Enter the price you would like to offer. The seller can accept, decline, or counter.",
+    offerAmountLabel: "Your offer",
+    reserveModalTitle: "Reserve this card?",
+    reserveModalBody: "Reserve this card for",
+    reserveModalFoot: "at the listed price. It will be hidden from Discover until the deal completes or is cancelled.",
+    confirmReserve: "Reserve card",
+    cancel: "Cancel",
+    submitOffer: "Submit offer",
     unavailable: "This card is no longer accepting offers.",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
@@ -53,7 +71,9 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [offers, setOffers] = useState<ApiOffer[]>([]);
   const [body, setBody] = useState("");
   const [offerAmount, setOfferAmount] = useState("");
-  const [reservePrice, setReservePrice] = useState("");
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
@@ -104,7 +124,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     void loadThreads();
   }, [isAuthenticated]);
   useEffect(() => {
-    setMessages([]); setOffers([]); setBody(""); setOfferAmount(""); setReservePrice(""); setError("");
+    setMessages([]); setOffers([]); setBody(""); setOfferAmount("");
+    setShowOfferModal(false); setShowReserveModal(false); setError("");
     if (!active) return;
     // Ignore stale responses if the user switches chats or leaves the page.
     let ignore = false;
@@ -145,20 +166,32 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   };
 
   const makeOffer = async () => {
-    if (!active || !offerAmount) return;
-    try { const offer = await api.createOffer(active.id, offerAmount, active.listing.currency); setOffers(items => [offer, ...items]); setOfferAmount(""); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Request failed"); }
+    if (!active || !offerAmount.trim()) return;
+    setActionLoading(true);
+    try {
+      const offer = await api.createOffer(active.id, offerAmount.trim(), active.listing.currency);
+      setOffers(items => [offer, ...items]);
+      setOfferAmount("");
+      setShowOfferModal(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Request failed");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const reserveForBuyer = async () => {
     if (!active) return;
+    setActionLoading(true);
     try {
-      await api.reserveListing(active.id, reservePrice.trim() || undefined);
-      setReservePrice("");
+      await api.reserveListing(active.id);
+      setShowReserveModal(false);
       await loadThreads();
       setOffers(await api.offers(active.id));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -180,8 +213,10 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   }).sort((a, b) => Date.parse(b.latest_message?.created_at || b.updated_at) - Date.parse(a.latest_message?.created_at || a.updated_at));
   const timeLabel = (date: string) => new Intl.DateTimeFormat(lang === "th" ? "th-TH" : "en-US", { month: "short", day: "numeric" }).format(new Date(date));
   const isSeller = active != null && currentUser != null && active.seller.id === Number(currentUser.id);
-  const canOffer = active != null && !active.deal && active.listing.status === "active";
-  const canReserve = isSeller && canOffer;
+  const isBuyer = active != null && currentUser != null && active.buyer.id === Number(currentUser.id);
+  const listingOpen = active != null && !active.deal && active.listing.status === "active";
+  const canReserve = isSeller && listingOpen;
+  const canMakeOffer = isBuyer && listingOpen;
 
   return (
     <div className="flex flex-col h-full min-h-0 pixel-bg">
@@ -249,7 +284,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
               {formatMoney(Number(active.listing.asking_price), active.listing.currency, lang)}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2 max-w-3xl">
+          <div className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-2 w-full ${(canReserve || canMakeOffer) ? "pb-24" : ""}`}>
             {threadLoading && <p role="status" className="text-xs text-muted-foreground">{inbox.loading}</p>}
             {messages.map(message => (
               <div key={message.id} className={`flex ${message.author.id === Number(currentUser?.id) ? "justify-end" : "justify-start"}`}>
@@ -266,7 +301,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                   <b className="text-primary">{formatMoney(Number(offer.amount), offer.currency, lang)}</b>
                 </div>
                 <p className="text-[10px] text-muted-foreground">{offer.proposer.display_name} · {offer.status}</p>
-                {canOffer && offer.status === "pending" && offer.proposer.id !== Number(currentUser?.id) && (
+                {listingOpen && offer.status === "pending" && offer.proposer.id !== Number(currentUser?.id) && (
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => void actOnOffer(offer, "accept")} className="btn-primary px-3 py-1 text-xs">{copy.accept}</button>
                     <button onClick={() => void actOnOffer(offer, "decline")} className="px-3 py-1 text-xs btn-danger-outline">{copy.decline}</button>
@@ -275,26 +310,25 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
               </div>
             ))}
           </div>
-          <div className="p-3 md:p-4 space-y-2 shrink-0 max-w-3xl w-full chat-toolbar">
-            {canReserve && (
-              <div className="flex gap-2">
-                <input value={reservePrice} onChange={event => setReservePrice(event.target.value)} type="number"
-                  aria-label={copy.reserveHint}
-                  placeholder={copy.reserveHint}
-                  className="flex-1 min-w-0 field-input text-sm" />
-                <button onClick={() => void reserveForBuyer()} className="btn-primary px-3 text-xs shrink-0">{copy.reserve}</button>
+          <div className="sticky bottom-0 z-10 shrink-0 w-full chat-toolbar relative">
+            {(canReserve || canMakeOffer) && (
+              <div className="absolute right-3 md:right-4 bottom-full mb-5 flex flex-col items-end gap-2 pointer-events-none">
+                {canReserve && (
+                  <button type="button" onClick={() => setShowReserveModal(true)}
+                    className="pointer-events-auto py-2.5 px-4 text-xs font-bold btn-primary rounded-lg shadow-lg max-w-[min(100vw-2rem,16rem)] text-right leading-snug">
+                    {copy.reserve}
+                  </button>
+                )}
+                {canMakeOffer && (
+                  <button type="button" onClick={() => setShowOfferModal(true)}
+                    className="pointer-events-auto py-2.5 px-4 text-xs font-bold btn-primary rounded-lg shadow-lg">
+                    {copy.offer}
+                  </button>
+                )}
               </div>
             )}
-            {canOffer && (
-              <div className="flex gap-2">
-                <input value={offerAmount} onChange={event => setOfferAmount(event.target.value)} type="number"
-                  aria-label={`${copy.offer} (${active.listing.currency})`}
-                  placeholder={`${copy.offer} (${active.listing.currency})`}
-                  className="flex-1 min-w-0 field-input text-sm" />
-                <button onClick={() => void makeOffer()} className="btn-primary px-3 text-xs shrink-0">{copy.offer}</button>
-              </div>
-            )}
-            {!canOffer && <p className="text-xs text-muted-foreground">{copy.unavailable}</p>}
+            <div className="p-3 md:p-4 space-y-2 max-w-3xl w-full">
+            {!listingOpen && <p className="text-xs text-muted-foreground">{copy.unavailable}</p>}
             <div className="flex gap-2">
               <input value={body} onChange={event => setBody(event.target.value)}
                 onKeyDown={event => event.key === "Enter" && !event.nativeEvent.isComposing && void sendMessage()}
@@ -326,6 +360,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                 {copy.reviewBanner} {active.deal.counterparty_name || threadLabel(active)} · {copy.leaveReview}
               </button>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -341,6 +376,60 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
           }}
           onDismiss={() => setReviewPrompt(null)}
         />
+      )}
+      {showOfferModal && active && (
+        <div className="fixed inset-0 z-[90] flex items-end md:items-center justify-center p-0 md:p-4 modal-backdrop"
+          onClick={() => !actionLoading && setShowOfferModal(false)}>
+          <div className="w-full max-w-sm p-5 md:p-6 panel-card rounded-t-lg md:rounded-lg border-t md:border modal-panel"
+            onClick={event => event.stopPropagation()} role="dialog" aria-labelledby="offer-modal-title">
+            <h2 id="offer-modal-title" className="font-display text-lg font-bold text-foreground mb-2">{copy.offerModalTitle}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{copy.offerModalBody}</p>
+            <label className="block text-xs font-bold text-muted-foreground mb-1.5" htmlFor="offer-amount">
+              {copy.offerAmountLabel} ({active.listing.currency})
+            </label>
+            <input id="offer-amount" type="number" min="0" step="0.01" autoFocus value={offerAmount}
+              onChange={event => setOfferAmount(event.target.value)}
+              onKeyDown={event => event.key === "Enter" && !event.nativeEvent.isComposing && void makeOffer()}
+              className="w-full field-input text-sm mb-4" />
+            <div className="flex gap-2">
+              <button type="button" disabled={actionLoading} onClick={() => setShowOfferModal(false)}
+                className="flex-1 py-3 text-sm font-bold chip-btn-outline">
+                {copy.cancel}
+              </button>
+              <button type="button" disabled={actionLoading || !offerAmount.trim()} onClick={() => void makeOffer()}
+                className="flex-1 py-3 text-sm font-bold btn-primary">
+                {copy.submitOffer}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showReserveModal && active && (
+        <div className="fixed inset-0 z-[90] flex items-end md:items-center justify-center p-0 md:p-4 modal-backdrop"
+          onClick={() => !actionLoading && setShowReserveModal(false)}>
+          <div className="w-full max-w-sm p-5 md:p-6 panel-card rounded-t-lg md:rounded-lg border-t md:border modal-panel"
+            onClick={event => event.stopPropagation()} role="dialog" aria-labelledby="reserve-modal-title">
+            <h2 id="reserve-modal-title" className="font-display text-lg font-bold text-foreground mb-2">{copy.reserveModalTitle}</h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              {copy.reserveModalBody}{" "}
+              <span className="font-semibold text-foreground">{active.buyer.display_name}</span>
+            </p>
+            <p className="text-sm font-mono text-primary mb-1">
+              {formatMoney(Number(active.listing.asking_price), active.listing.currency, lang)}
+            </p>
+            <p className="text-xs text-muted-foreground mb-5">{copy.reserveModalFoot}</p>
+            <div className="flex gap-2">
+              <button type="button" disabled={actionLoading} onClick={() => setShowReserveModal(false)}
+                className="flex-1 py-3 text-sm font-bold chip-btn-outline">
+                {copy.cancel}
+              </button>
+              <button type="button" disabled={actionLoading} onClick={() => void reserveForBuyer()}
+                className="flex-1 py-3 text-sm font-bold btn-primary">
+                {copy.confirmReserve}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
