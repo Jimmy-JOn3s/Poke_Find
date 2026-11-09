@@ -18,7 +18,7 @@ class ListingApiTests(ApiTestCase):
         super().setUp()
         self.seller = User.objects.create_user(
             username="seller", email="seller@example.com", password="password123",
-            display_name="Bangkok Cards",
+            display_name="Bangkok Cards", is_email_verified=True, is_verified_seller=True,
         )
         self.other = User.objects.create_user(
             username="other", email="other@example.com", password="password123",

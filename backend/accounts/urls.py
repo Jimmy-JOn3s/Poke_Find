@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from .verification_views import VerificationSubmissionView
 from .views import (
     EmailVerificationConfirmView, EmailVerificationRequestView,
     LoginView, LogoutView, MagicLinkConfirmView, MagicLinkRequestView, MeView, PasswordResetConfirmView,
@@ -19,6 +20,7 @@ urlpatterns = [
     path("magic-link/confirm/", MagicLinkConfirmView.as_view(), name="magic-link-confirm"),
     path("email-verification/", EmailVerificationRequestView.as_view(), name="email-verification"),
     path("email-verification/confirm/", EmailVerificationConfirmView.as_view(), name="email-verification-confirm"),
+    path("verification-submission/", VerificationSubmissionView.as_view(), name="verification-submission"),
     path("me/", MeView.as_view(), name="me"),
     path("users/<int:user_id>/", UserProfileView.as_view(), name="user-profile"),
     path("users/<int:user_id>/reviews/", UserReviewsView.as_view(), name="user-reviews"),

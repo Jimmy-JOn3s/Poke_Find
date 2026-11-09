@@ -4,6 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.verification_models import VerificationSubmission
 from marketplace.models import Listing
 from messaging.models import Conversation, Deal, Message, Offer, Review
 
@@ -65,6 +66,10 @@ class AdminOverviewView(APIView):
             resolved=Count("id", filter=Q(status=ContentReport.Status.RESOLVED)),
             dismissed=Count("id", filter=Q(status=ContentReport.Status.DISMISSED)),
         )
+        verifications = VerificationSubmission.objects.aggregate(
+            total=Count("id"),
+            pending=Count("id", filter=Q(status=VerificationSubmission.Status.PENDING)),
+        )
         by_reason = {
             row["reason"]: row["count"]
             for row in ContentReport.objects.values("reason").annotate(count=Count("id")).order_by("-count")
@@ -78,6 +83,7 @@ class AdminOverviewView(APIView):
             "listings": listings,
             "messaging": messaging,
             "reports": reports,
+            "verifications": verifications,
             "reports_by_reason": by_reason,
             "reports_by_category": by_category,
         })

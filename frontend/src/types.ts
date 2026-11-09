@@ -9,6 +9,17 @@ export type CardRarity = 'common' | 'uncommon' | 'rare' | 'ultra' | 'secret';
 export type { VerificationTier, SellerVerificationType } from './lib/verification';
 import type { VerificationTier } from './lib/verification';
 
+export type VerificationSubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+export interface VerificationSubmissionSummary {
+  id: number;
+  document_type: 'id' | 'passport';
+  status: VerificationSubmissionStatus;
+  rejection_reason: string;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -29,6 +40,7 @@ export interface User {
   preferredLanguage?: AppLang;
   preferredCurrency?: Currency;
   isStaff?: boolean;
+  verificationSubmission?: VerificationSubmissionSummary | null;
 }
 
 export interface Listing {

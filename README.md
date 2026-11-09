@@ -20,6 +20,7 @@ REST API, with Thai/English interfaces and THB/USD pricing.
   completion
   listing, either side can cancel before confirming, and both confirm completion
 - User content reports (listings and profiles) and an in-app staff admin dashboard
+- Manual seller identity review: users upload ID or passport (optional selfie); staff approve or reject in the admin dashboard (files stored under `backend/private_media/`, not public `/media/`). **Creating listings requires verified email or staff-approved identity (either one is enough).**
 - Django admin and deterministic demo data
 
 Payments, escrow, delivery booking, live exchange rates, and production

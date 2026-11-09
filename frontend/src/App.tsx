@@ -55,6 +55,14 @@ export default function App() {
 
   const isAuthenticated = Boolean(currentUser);
 
+  const refreshCurrentUser = async () => {
+    const user = await api.me();
+    const mapped = mapUser(user);
+    setCurrentUser(mapped);
+    if (mapped.preferredLanguage) setLangState(mapped.preferredLanguage);
+    if (mapped.preferredCurrency) setCurrencyState(mapped.preferredCurrency);
+  };
+
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
@@ -281,7 +289,8 @@ export default function App() {
         return <SettingsPage lang={lang} onLangChange={setLang} currency={currency} onCurrencyChange={setCurrency}
           theme={theme} onThemeChange={setTheme}
           currentUser={currentUser} isAuthenticated={isAuthenticated} onSignOut={handleSignOut} onSignIn={() => setCurrentPage("auth")}
-          onAdmin={() => setCurrentPage("admin")} />;
+          onAdmin={() => setCurrentPage("admin")}
+          onUserRefresh={refreshCurrentUser} />;
       case "analytics":
         return <AnalyticsPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("profile")} />;
       case "admin":
@@ -295,8 +304,8 @@ export default function App() {
               setCurrentPage("auth");
               return;
             }
-            if (!currentUser?.emailVerified) {
-              setActionError(i18n[lang].verifyEmailBeforeListing);
+            if (!currentUser?.emailVerified && !currentUser?.verified) {
+              setActionError(i18n[lang].verifyBeforeListing);
               setCurrentPage("settings");
               return;
             }

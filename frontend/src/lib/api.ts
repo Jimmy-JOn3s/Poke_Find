@@ -62,6 +62,28 @@ export interface ApiUser {
   location?: string;
   bio?: string;
   is_staff?: boolean;
+  verification_submission?: {
+    id: number;
+    document_type: "id" | "passport";
+    status: "pending" | "approved" | "rejected";
+    rejection_reason: string;
+    created_at: string;
+    reviewed_at: string | null;
+  } | null;
+}
+
+export interface ApiAdminVerification {
+  id: number;
+  document_type: "id" | "passport";
+  status: "pending" | "approved" | "rejected";
+  user_display_name: string;
+  user_email: string;
+  admin_notes: string;
+  rejection_reason: string;
+  has_selfie: boolean;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type ReportReason = "spam" | "scam" | "fake_listing" | "harassment" | "inappropriate" | "other";
@@ -106,6 +128,7 @@ export interface AdminOverview {
     reviews: number;
   };
   reports: { total: number; pending: number; reviewing: number; resolved: number; dismissed: number };
+  verifications: { total: number; pending: number };
   reports_by_reason: Record<string, number>;
   reports_by_category: Record<string, number>;
 }
@@ -253,6 +276,7 @@ export function mapUser(item: ApiUser) {
     joinedDate: new Date().toISOString().slice(0, 10), location: item.location || "", bio: item.bio || "",
     preferredLanguage: item.preferred_language, preferredCurrency: item.preferred_currency,
     isStaff: Boolean(item.is_staff),
+    verificationSubmission: item.verification_submission ?? null,
   };
 }
 
@@ -498,5 +522,32 @@ export const api = {
   },
   updateAdminReport(id: number, payload: { status?: ReportStatus; admin_notes?: string }): Promise<ApiContentReport> {
     return request(`/admin/reports/${id}/`, { method: "PATCH", body: JSON.stringify(payload) });
+  },
+  submitVerification(documentType: "id" | "passport", idDocument: File, selfie?: File | null): Promise<NonNullable<ApiUser["verification_submission"]>> {
+    const form = new FormData();
+    form.append("document_type", documentType);
+    form.append("id_document", idDocument);
+    if (selfie) form.append("selfie", selfie);
+    return request("/auth/verification-submission/", { method: "POST", body: form });
+  },
+  async adminVerifications(status?: "pending" | "approved" | "rejected"): Promise<ApiAdminVerification[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    const result = await request<{ results: ApiAdminVerification[] }>(`/admin/verifications/${query}`);
+    return result.results ?? [];
+  },
+  reviewAdminVerification(
+    id: number,
+    payload: { action: "approve" | "reject"; admin_notes?: string; rejection_reason?: string },
+  ): Promise<ApiAdminVerification> {
+    return request(`/admin/verifications/${id}/review/`, { method: "POST", body: JSON.stringify(payload) });
+  },
+  async adminVerificationFileBlob(id: number, field: "id_document" | "selfie"): Promise<Blob> {
+    const token = readStorage(ACCESS_TOKEN_KEY);
+    const response = await send(`/admin/verifications/${id}/file/${field}/`, { method: "GET" }, token);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({})) as { detail?: string };
+      throw new ApiError(payload.detail || `Request failed (${response.status})`, undefined, response.status);
+    }
+    return response.blob();
   },
 };
