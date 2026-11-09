@@ -129,6 +129,22 @@ class DealIntegrityTests(ApiTestCase):
         self.assertEqual(self.accept(again).status_code, 200)
         self.assertEqual(self.live_deal(self.conversation).accepted_offer_id, again)
 
+    def test_cancel_restores_offers_auto_declined_when_the_deal_opened(self):
+        winning = self.offer(self.buyer, self.conversation, "500.00").data["id"]
+        competing = self.offer(self.buyer_two, self.conversation_two, "480.00").data["id"]
+        manually_declined = self.offer(self.buyer_two, self.conversation_two, "400.00").data["id"]
+        self.assertEqual(
+            self.as_user(self.seller).post(f"/api/offers/{manually_declined}/decline/").status_code, 200,
+        )
+        self.assertEqual(self.accept(winning).status_code, 200)
+        deal = self.live_deal(self.conversation)
+        self.assertEqual(Offer.objects.get(pk=competing).status, Offer.Status.DECLINED)
+        self.assertEqual(Offer.objects.get(pk=manually_declined).status, Offer.Status.DECLINED)
+        self.assertEqual(self.as_user(self.buyer).post(f"/api/deals/{deal.id}/cancel/").status_code, 200)
+        self.assertEqual(self.listing_status(), Listing.Status.ACTIVE)
+        self.assertEqual(Offer.objects.get(pk=competing).status, Offer.Status.PENDING)
+        self.assertEqual(Offer.objects.get(pk=manually_declined).status, Offer.Status.DECLINED)
+
     def test_cannot_cancel_once_someone_confirmed(self):
         self.accept(self.offer(self.buyer, self.conversation).data["id"])
         deal = self.live_deal(self.conversation)
