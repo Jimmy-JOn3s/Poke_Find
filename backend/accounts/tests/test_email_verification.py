@@ -96,9 +96,50 @@ class EmailVerificationTests(ApiTestCase):
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_verified_user_can_create_a_listing(self):
+    def test_email_verified_user_can_create_a_listing_without_identity(self):
         self.user.is_email_verified = True
         self.user.save(update_fields=["is_email_verified"])
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/listings/", {
+            "product_name": "Pikachu",
+            "set_name": "Base",
+            "set_code": "BS",
+            "card_number": "58",
+            "condition": "NM",
+            "card_language": "en",
+            "rarity": "rare",
+            "asking_price": "100.00",
+            "currency": "THB",
+            "quantity": 1,
+            "description": "",
+            "status": "active",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_identity_verified_user_can_create_a_listing_without_email(self):
+        self.user.is_verified_seller = True
+        self.user.save(update_fields=["is_verified_seller"])
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/listings/", {
+            "product_name": "Pikachu",
+            "set_name": "Base",
+            "set_code": "BS",
+            "card_number": "58",
+            "condition": "NM",
+            "card_language": "en",
+            "rarity": "rare",
+            "asking_price": "100.00",
+            "currency": "THB",
+            "quantity": 1,
+            "description": "",
+            "status": "active",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_verified_user_can_create_a_listing(self):
+        self.user.is_email_verified = True
+        self.user.is_verified_seller = True
+        self.user.save(update_fields=["is_email_verified", "is_verified_seller"])
         self.client.force_authenticate(self.user)
         response = self.client.post("/api/listings/", {
             "product_name": "Pikachu",

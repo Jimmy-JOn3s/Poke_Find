@@ -60,9 +60,12 @@ class ListingViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        if not self.request.user.is_email_verified:
-            raise PermissionDenied("Verify your email before creating a listing.")
-        serializer.save(seller=self.request.user)
+        user = self.request.user
+        if not (user.is_email_verified or user.is_verified_seller):
+            raise PermissionDenied(
+                "Verify your email or complete identity verification before creating a listing.",
+            )
+        serializer.save(seller=user)
 
     def perform_destroy(self, instance):
         with transaction.atomic():

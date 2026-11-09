@@ -14,6 +14,9 @@ from rest_framework_simplejwt.utils import get_md5_hash_password
 from common.validators import validate_upload_size
 from messaging.models import Deal, Review
 
+from .verification_models import VerificationSubmission
+from .verification_serializers import VerificationSubmissionStatusSerializer
+
 
 User = get_user_model()
 
@@ -32,18 +35,27 @@ def user_review_stats(user):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    verification_submission = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
             "id", "username", "email", "display_name", "role",
             "preferred_language", "preferred_currency", "avatar", "location",
             "bio", "is_email_verified", "is_verified_seller", "seller_verification_type", "is_staff", "date_joined",
+            "verification_submission",
         )
         read_only_fields = (
             "id", "username", "email", "is_email_verified", "is_verified_seller",
-            "seller_verification_type", "is_staff", "date_joined",
+            "seller_verification_type", "is_staff", "date_joined", "verification_submission",
         )
         extra_kwargs = {"avatar": {"validators": [validate_image_file_extension, validate_upload_size]}}
+
+    def get_verification_submission(self, obj):
+        latest = VerificationSubmission.objects.filter(user=obj).order_by("-created_at").first()
+        if latest is None:
+            return None
+        return VerificationSubmissionStatusSerializer(latest).data
 
 
 class PublicUserSerializer(serializers.ModelSerializer):

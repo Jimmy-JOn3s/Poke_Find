@@ -40,3 +40,6 @@ class User(AbstractUser):
     class Meta(AbstractUser.Meta):
         constraints = [models.UniqueConstraint(Lower("email"), name="unique_user_email_ci")]
 
+
+from .verification_models import VerificationSubmission  # noqa: E402,F401
+
