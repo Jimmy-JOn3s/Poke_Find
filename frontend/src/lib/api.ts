@@ -72,6 +72,26 @@ export interface ApiUser {
   } | null;
 }
 
+export interface BusinessAnalytics {
+  revenue_by_currency: Record<string, string>;
+  chart_currency: Currency;
+  transactions: number;
+  deals_active: number;
+  listings: { active: number; reserved: number; sold: number; total: number };
+  rating: number;
+  review_count: number;
+  total_sold: number;
+  monthly: { month: string; revenue: string; transactions: number; currency: Currency }[];
+  top_cards: { name: string; currency: string; sold: number; revenue: string }[];
+  recent_sales: {
+    card_name: string;
+    buyer_name: string;
+    price: string;
+    currency: Currency;
+    completed_at: string;
+  }[];
+}
+
 export interface ApiAdminVerification {
   id: number;
   document_type: "id" | "passport";
@@ -436,6 +456,7 @@ export const api = {
     });
   },
   me(): Promise<ApiUser> { return request("/auth/me/"); },
+  analyticsMe(): Promise<BusinessAnalytics> { return request("/analytics/me/"); },
   updateMe(payload: Partial<ApiUser>): Promise<ApiUser> {
     return request("/auth/me/", { method: "PATCH", body: JSON.stringify(payload) });
   },

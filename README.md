@@ -13,6 +13,7 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 - THB and USD listing prices with configurable display conversion
 - Listing discovery, search, filters, creation, editing, and deletion
 - Saved-listing API
+- Business analytics from completed deals (revenue, monthly chart, top cards, recent sales)
 - Private buyer/seller conversations and messages
 - Offers and counter-offers answered by the other party; accepting reserves the
   listing. Sellers can also reserve a card for a buyer directly from chat (no
