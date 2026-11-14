@@ -51,6 +51,7 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [savedListingsBump, setSavedListingsBump] = useState(0);
   const { listings, loading, error, reload, create, remove, setListings } = useListings();
 
   const isAuthenticated = Boolean(currentUser);
@@ -211,6 +212,13 @@ export default function App() {
     }
   };
 
+  const handleListingSaved = (listingId: string, saved: boolean) => {
+    const patch = (item: Listing) => (item.id === listingId ? { ...item, isSaved: saved } : item);
+    setListings((current) => current.map(patch));
+    setSelectedListing((current) => (current?.id === listingId ? patch(current) : current));
+    setSavedListingsBump((value) => value + 1);
+  };
+
   const handleDeleteListing = async (listingId: string) => {
     try {
       await remove(listingId);
@@ -274,6 +282,7 @@ export default function App() {
           onViewProfile={id => { setViewUserId(id); setCurrentPage("profile"); }}
           onEditListing={listing => { setEditListing(listing); setShowCreateListing(true); }}
           onDeleteListing={id => void handleDeleteListing(id)}
+          onSavedChange={handleListingSaved}
           onSignIn={() => setCurrentPage("auth")} />;
       case "chat":
         return <ChatPage initialConversationId={conversationId} lang={lang} currentUser={currentUser} isAuthenticated={isAuthenticated}
@@ -281,7 +290,8 @@ export default function App() {
       case "profile":
         return <ProfilePage lang={lang} currentUser={currentUser} viewUserId={viewUserId}
           reviewContext={reviewContext} listings={listings} displayCurrency={currency}
-          isAuthenticated={isAuthenticated} onSignIn={() => setCurrentPage("auth")}
+          isAuthenticated={isAuthenticated} savedListingsBump={savedListingsBump}
+          onSignIn={() => setCurrentPage("auth")}
           onSelectListing={listing => { setSelectedListing(listing); setCurrentPage("listing"); }}
           onViewAnalytics={() => setCurrentPage("analytics")}
           onReviewContextClear={() => setReviewContext(undefined)} />;

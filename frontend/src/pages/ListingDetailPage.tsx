@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Listing, AppLang, Currency, User } from '../types';
 import { i18n } from '../i18n';
+import { api } from '../lib/api';
 import { MOCK_USERS } from '../mockData';
 import { hasPublicVerificationBadge, verificationBadgeLabel } from '../lib/verification';
 import Price from '../components/Price';
@@ -18,11 +19,17 @@ interface Props {
   onDeleteListing?: (listingId: string) => void;
   displayCurrency: Currency;
   onSignIn: () => void;
+  onSavedChange?: (listingId: string, saved: boolean) => void;
 }
 
-export default function ListingDetailPage({ listing, lang, currentUser, onBack, onChat, onViewProfile, onEditListing, onDeleteListing, displayCurrency, onSignIn }: Props) {
+export default function ListingDetailPage({ listing, lang, currentUser, onBack, onChat, onViewProfile, onEditListing, onDeleteListing, displayCurrency, onSignIn, onSavedChange }: Props) {
   const t = i18n[lang];
-  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(Boolean(listing.isSaved));
+  const [saveBusy, setSaveBusy] = useState(false);
+
+  useEffect(() => {
+    setSaved(Boolean(listing.isSaved));
+  }, [listing.id, listing.isSaved]);
   const [showDelete, setShowDelete] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const isOwner = currentUser?.id === listing.sellerId;
@@ -63,9 +70,27 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
           ←
         </button>
 
-        <button onClick={() => setLiked(!liked)}
-          className={`absolute top-12 md:top-4 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all icon-btn ${liked ? 'text-accent' : ''}`}
-          style={liked ? { background: 'color-mix(in srgb, var(--color-accent) 30%, transparent)', borderColor: 'color-mix(in srgb, var(--color-accent) 50%, transparent)' } : undefined}>
+        <button
+          type="button"
+          disabled={saveBusy}
+          aria-label={saved ? t.savedListings : t.save}
+          aria-pressed={saved}
+          onClick={() => {
+            if (!currentUser) {
+              onSignIn();
+              return;
+            }
+            const next = !saved;
+            setSaveBusy(true);
+            void api.saveListing(listing.id, next)
+              .then(() => {
+                setSaved(next);
+                onSavedChange?.(listing.id, next);
+              })
+              .finally(() => setSaveBusy(false));
+          }}
+          className={`absolute top-12 md:top-4 right-4 z-20 w-9 h-9 flex items-center justify-center transition-all icon-btn ${saved ? 'text-accent' : ''}`}
+          style={saved ? { background: 'color-mix(in srgb, var(--color-accent) 30%, transparent)', borderColor: 'color-mix(in srgb, var(--color-accent) 50%, transparent)' } : undefined}>
           ♥
         </button>
 
@@ -160,7 +185,7 @@ export default function ListingDetailPage({ listing, lang, currentUser, onBack, 
 
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-mono mb-2 md:mb-0">
-            <span>♥ {liked ? listing.likes + 1 : listing.likes}</span>
+            <span>♥ {listing.likes}</span>
             <span>·</span>
             <span>👁 {listing.views}</span>
             <span>·</span>

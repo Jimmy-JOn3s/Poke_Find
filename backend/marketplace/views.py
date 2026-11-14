@@ -85,3 +85,19 @@ class ListingViewSet(viewsets.ModelViewSet):
         SavedListing.objects.filter(user=request.user, listing=listing).delete()
         return Response({"saved": False}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=("get",), permission_classes=(permissions.IsAuthenticated,))
+    def saved(self, request):
+        queryset = (
+            Listing.objects.filter(saved_by__user=request.user)
+            .filter(Q(status=Listing.Status.ACTIVE) | Q(seller=request.user))
+            .select_related("seller")
+            .distinct()
+            .order_by("-created_at")
+        )
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+

@@ -20,14 +20,17 @@ interface Props {
   onSelectListing: (l: Listing) => void;
   onViewAnalytics: () => void;
   onReviewContextClear: () => void;
+  savedListingsBump?: number;
 }
 
 export default function ProfilePage({
   lang, currentUser, listings, displayCurrency, viewUserId, reviewContext,
-  isAuthenticated, onSignIn, onSelectListing, onViewAnalytics, onReviewContextClear,
+  isAuthenticated, savedListingsBump = 0, onSignIn, onSelectListing, onViewAnalytics, onReviewContextClear,
 }: Props) {
   const t = i18n[lang];
-  const [tab, setTab] = useState<'listings' | 'reviews'>('listings');
+  const [tab, setTab] = useState<'listings' | 'saved' | 'reviews'>('listings');
+  const [savedListings, setSavedListings] = useState<Listing[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [pendingDealId, setPendingDealId] = useState<number | null>(null);
@@ -76,6 +79,18 @@ export default function ProfilePage({
       })
       .finally(() => setLoading(false));
   }, [profileId, isOwnProfile, currentUser, viewUserId, reviewContext]);
+
+  useEffect(() => {
+    if (!isOwnProfile || !isAuthenticated) {
+      setSavedListings([]);
+      return;
+    }
+    setSavedLoading(true);
+    api.savedListings()
+      .then(setSavedListings)
+      .catch(() => setSavedListings([]))
+      .finally(() => setSavedLoading(false));
+  }, [isOwnProfile, isAuthenticated, profileId, savedListingsBump]);
 
   if (!isAuthenticated && isOwnProfile) {
     return (
@@ -186,16 +201,23 @@ export default function ProfilePage({
       )}
 
       <div className="page-container flex px-4 md:px-6 lg:px-8 pt-3 gap-2 max-w-2xl">
-        {(['listings', 'reviews'] as const).map(tabId => (
+        {(['listings', ...(isOwnProfile ? (['saved'] as const) : []), 'reviews'] as const).map(tabId => (
           <button key={tabId} onClick={() => setTab(tabId)}
             className={`flex-1 py-2.5 text-sm font-bold font-display transition-all tab-btn ${tab === tabId ? 'tab-btn-active' : ''}`}>
-            {tabId === 'listings' ? `${t.activeListings} (${userListings.length})` : `${t.reviews} (${reviews.length})`}
+            {tabId === 'listings'
+              ? `${t.activeListings} (${userListings.length})`
+              : tabId === 'saved'
+                ? `${t.savedListings} (${savedListings.length})`
+                : `${t.reviews} (${reviews.length})`}
           </button>
         ))}
       </div>
 
       <div className="flex-1 overflow-y-auto scroll-end-buffer px-4 md:px-6 lg:px-8 pt-3">
         {loading && tab === 'reviews' && (
+          <p className="text-sm text-muted-foreground text-center py-6">{t.loading}</p>
+        )}
+        {savedLoading && tab === 'saved' && (
           <p className="text-sm text-muted-foreground text-center py-6">{t.loading}</p>
         )}
 
@@ -231,6 +253,38 @@ export default function ProfilePage({
                         <span className="font-pixel text-[8px] px-2 py-1 badge-verified">✓ {t.sold}</span>
                       </div>
                     )}
+                  </div>
+                  <div className="p-2">
+                    <p className="font-display text-xs font-semibold text-foreground line-clamp-1 mb-0.5">{listing.productName}</p>
+                    <Price amount={listing.listedPrice} currency={listing.currency ?? 'THB'} displayCurrency={displayCurrency} lang={lang} className="text-sm font-bold font-mono text-primary" />
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {tab === 'saved' && isOwnProfile && !savedLoading && (
+          <div className="page-container grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-3 lg:gap-4">
+            {savedListings.length === 0 ? (
+              <div className="col-span-2 py-12 text-center">
+                <p className="font-display text-sm text-muted-foreground">{t.noSavedListings}</p>
+              </div>
+            ) : (
+              savedListings.map(listing => (
+                <button key={listing.id} onClick={() => onSelectListing(listing)}
+                  className="text-left overflow-hidden transition-all card-hover listing-card">
+                  <div className="relative aspect-square overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, ${listing.gradientFrom}33, ${listing.gradientTo}44)` }}>
+                    <CardArt
+                      imageUrl={listing.imageUrl}
+                      typeIcon={listing.typeIcon}
+                      gradientFrom={listing.gradientFrom}
+                      gradientTo={listing.gradientTo}
+                      alt={listing.productName}
+                      iconClassName="text-4xl"
+                      fill
+                    />
                   </div>
                   <div className="p-2">
                     <p className="font-display text-xs font-semibold text-foreground line-clamp-1 mb-0.5">{listing.productName}</p>
