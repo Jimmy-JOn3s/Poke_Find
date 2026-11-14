@@ -80,3 +80,16 @@ class ListingApiTests(ApiTestCase):
         self.assertEqual(first.data, {"saved": True})
         self.assertEqual(second.data, {"saved": True})
         self.assertEqual(removed.data, {"saved": False})
+
+    def test_saved_list_returns_only_users_bookmarks(self):
+        self.client.force_authenticate(self.other)
+        empty = self.client.get("/api/listings/saved/")
+        self.assertEqual(empty.status_code, status.HTTP_200_OK)
+        self.assertEqual(empty.data["count"], 0)
+
+        self.client.post(f"/api/listings/{self.listing.id}/save/")
+        saved = self.client.get("/api/listings/saved/")
+        self.assertEqual(saved.status_code, status.HTTP_200_OK)
+        self.assertEqual(saved.data["count"], 1)
+        self.assertEqual(saved.data["results"][0]["id"], self.listing.id)
+        self.assertTrue(saved.data["results"][0]["is_saved"])

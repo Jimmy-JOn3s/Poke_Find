@@ -480,6 +480,10 @@ export const api = {
   saveListing(id: string, saved: boolean): Promise<{ saved: boolean }> {
     return request(`/listings/${id}/save/`, { method: saved ? "POST" : "DELETE" });
   },
+  async savedListings(): Promise<Listing[]> {
+    const result = await request<{ results: ApiListing[] }>("/listings/saved/");
+    return result.results.map((item) => mapListing({ ...item, is_saved: true }));
+  },
   async conversations(): Promise<ApiConversation[]> {
     const result = await request<{ results: ApiConversation[] }>("/conversations/");
     return result.results;
