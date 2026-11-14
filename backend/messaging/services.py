@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from marketplace.market_intel import listing_snapshot_fields, record_price_observation
 from marketplace.models import Listing
 from .models import Conversation, Deal, Offer, Review
 
@@ -43,8 +44,11 @@ def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: 
     if not _move_listing(listing.pk, Listing.Status.ACTIVE, Listing.Status.RESERVED):
         raise ValidationError("This listing is no longer available")
     deal = Deal.objects.create(
-        conversation=conversation, accepted_offer=offer, final_price=offer.amount, currency=offer.currency,
-        card_name=listing.product_name, card_set=listing.set_name, condition=listing.condition,
+        conversation=conversation,
+        accepted_offer=offer,
+        final_price=offer.amount,
+        currency=offer.currency,
+        **listing_snapshot_fields(listing),
     )
     Offer.objects.filter(
         conversation__listing_id=listing.pk, status=Offer.Status.PENDING,
@@ -134,7 +138,10 @@ def confirm_deal(deal: Deal, actor) -> Deal:
     ).update(status=Deal.Status.COMPLETED, completed_at=timezone.now())
     if completed and not _move_listing(conversation.listing_id, Listing.Status.RESERVED, Listing.Status.SOLD):
         raise ValidationError("The listing is not reserved for this deal")
-    return Deal.objects.select_related("conversation").get(pk=deal.pk)
+    finished = Deal.objects.select_related("conversation").get(pk=deal.pk)
+    if completed:
+        record_price_observation(finished)
+    return finished
 
 
 @transaction.atomic

@@ -75,7 +75,13 @@ class Deal(models.Model):
     # relationships protect traded listings from deletion. These snapshots support future price data.
     card_name = models.CharField(max_length=180, blank=True)
     card_set = models.CharField(max_length=180, blank=True)
+    set_code = models.CharField(max_length=40, blank=True)
+    card_number = models.CharField(max_length=40, blank=True)
+    card_language = models.CharField(max_length=2, choices=Listing.CardLanguage.choices, blank=True)
     condition = models.CharField(max_length=2, choices=Listing.Condition.choices, blank=True)
+    asking_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    quantity = models.PositiveIntegerField(default=1)
+    variant_key = models.CharField(max_length=200, blank=True, db_index=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACCEPTED)
     buyer_confirmed = models.BooleanField(default=False)
     seller_confirmed = models.BooleanField(default=False)
