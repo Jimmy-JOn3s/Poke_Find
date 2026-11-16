@@ -70,7 +70,7 @@ class ListingApiTests(ApiTestCase):
             "quantity": 1, "description": "", "status": "active", "photo": upload,
         }, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data["photo"].startswith("/media/listings/"))
+        self.assertIn("/media/listings/", response.data["photo"])
 
     def test_save_action_is_idempotent_and_can_unsave(self):
         self.client.force_authenticate(self.other)

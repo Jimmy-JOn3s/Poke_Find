@@ -11,6 +11,14 @@ from marketplace.models import Listing
 from messaging.models import Deal
 
 
+CENTS = Decimal("0.01")
+
+
+def _money(value) -> str:
+    # SQLite's SUM drops the scale ("900") while PostgreSQL keeps it ("900.00"); always send two places.
+    return str((value or Decimal("0")).quantize(CENTS))
+
+
 def business_analytics(user: User) -> dict:
     stats = user_review_stats(user)
     listing_counts = {
@@ -27,7 +35,7 @@ def business_analytics(user: User) -> dict:
 
     revenue_by_currency: dict[str, str] = {}
     for row in completed.values("currency").annotate(total=Sum("final_price")):
-        revenue_by_currency[row["currency"]] = str(row["total"] or Decimal("0"))
+        revenue_by_currency[row["currency"]] = _money(row["total"])
 
     transactions = completed.count()
     chart_currency = user.preferred_currency
@@ -49,7 +57,7 @@ def business_analytics(user: User) -> dict:
         bucket = monthly_index.get(key)
         monthly.append({
             "month": key,
-            "revenue": str(bucket["revenue"] if bucket else Decimal("0")),
+            "revenue": _money(bucket["revenue"] if bucket else None),
             "transactions": bucket["transactions"] if bucket else 0,
             "currency": chart_currency,
         })
@@ -66,7 +74,7 @@ def business_analytics(user: User) -> dict:
         .order_by("-sold", "-revenue")[:5]
     )
     for row in top_cards:
-        row["revenue"] = str(row["revenue"] or Decimal("0"))
+        row["revenue"] = _money(row["revenue"])
         row["name"] = row.pop("card_name") or "—"
 
     recent_sales = []
@@ -74,7 +82,7 @@ def business_analytics(user: User) -> dict:
         recent_sales.append({
             "card_name": deal.card_name or "—",
             "buyer_name": deal.conversation.buyer.display_name,
-            "price": str(deal.final_price),
+            "price": _money(deal.final_price),
             "currency": deal.currency,
             "completed_at": deal.completed_at.isoformat(),
         })
