@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppLang, ReviewContext, User } from "../types";
 import { api, type ApiConversation, type ApiDeal, type ApiMessage, type ApiOffer } from "../lib/api";
 import { formatMoney } from "../lib/money";
@@ -88,6 +88,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  // State updates land after a re-render, so a fast double Enter could submit twice; a ref blocks it at once.
+  const offerSubmitting = useRef(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
@@ -184,7 +186,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   };
 
   const makeOffer = async () => {
-    if (!active || !offerAmount.trim()) return;
+    if (!active || !offerAmount.trim() || offerSubmitting.current) return;
+    offerSubmitting.current = true;
     setActionLoading(true);
     try {
       const offer = await api.createOffer(active.id, offerAmount.trim(), active.listing.currency);
@@ -194,6 +197,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
     } finally {
+      offerSubmitting.current = false;
       setActionLoading(false);
     }
   };

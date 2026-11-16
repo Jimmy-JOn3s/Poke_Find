@@ -46,6 +46,22 @@ class DealIntegrityTests(ApiTestCase):
         self.listing.refresh_from_db()
         return self.listing.status
 
+    def test_a_repeated_identical_offer_is_rejected(self):
+        # A double-tap or a retry on a slow connection must not leave two identical pending offers.
+        self.assertEqual(self.offer(self.buyer, self.conversation, "480.00").status_code, 201)
+        repeat = self.offer(self.buyer, self.conversation, "480")
+        self.assertEqual(repeat.status_code, 400)
+        self.assertEqual(Offer.objects.filter(conversation=self.conversation, amount=Decimal("480")).count(), 1)
+
+    def test_the_same_amount_can_be_offered_again_once_the_first_is_no_longer_pending(self):
+        first = self.offer(self.buyer, self.conversation, "480.00").data["id"]
+        self.assertEqual(self.as_user(self.seller).post(f"/api/offers/{first}/decline/").status_code, 200)
+        self.assertEqual(self.offer(self.buyer, self.conversation, "480.00").status_code, 201)
+
+    def test_a_different_amount_is_still_a_new_offer(self):
+        self.assertEqual(self.offer(self.buyer, self.conversation, "480.00").status_code, 201)
+        self.assertEqual(self.offer(self.buyer, self.conversation, "490.00").status_code, 201)
+
     def test_seller_can_reserve_without_buyer_acceptance(self):
         reserved = self.as_user(self.seller).post(
             f"/api/conversations/{self.conversation.id}/reserve/", {"amount": "500.00"}, format="json",

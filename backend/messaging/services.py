@@ -63,6 +63,11 @@ def place_offer(conversation: Conversation, proposer, amount: Decimal, currency:
     # so no offer can slip past the "decline other pending offers" sweep below.
     listing = lock_listing(conversation.listing_id)
     ensure_listing_accepts_offers(listing)
+    # A double-tap or retry would otherwise leave two identical pending offers; the listing lock serializes the check.
+    if Offer.objects.filter(
+        conversation=conversation, proposer=proposer, amount=amount, currency=currency, status=Offer.Status.PENDING,
+    ).exists():
+        raise ValidationError("You already have a pending offer for this amount")
     return Offer.objects.create(conversation=conversation, proposer=proposer, amount=amount, currency=currency)
 
 
