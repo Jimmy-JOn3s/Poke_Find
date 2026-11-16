@@ -185,6 +185,7 @@ if os.getenv("REDIS_URL"):
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": os.environ["REDIS_URL"]}}
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
+MARKET_PRICE_MIN_SALES = int(os.getenv("MARKET_PRICE_MIN_SALES", "20"))
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"

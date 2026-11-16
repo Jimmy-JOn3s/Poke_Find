@@ -6,6 +6,7 @@ from django.db.models.deletion import ProtectedError
 from common.testing import ApiTestCase
 from marketplace.models import Listing
 from messaging.models import Conversation, Deal
+from marketplace.models import PriceObservation
 from messaging.services import confirm_deal, place_offer, seller_reserve_listing, transition_offer
 
 
@@ -23,7 +24,7 @@ class DealPriceDataSnapshotTests(ApiTestCase):
         )
         self.listing = Listing.objects.create(
             seller=self.seller, product_name="Charizard ex", set_name="Obsidian Flames",
-            condition="NM", card_language="en", rarity="rare",
+            set_code="OBF", card_number="125/197", condition="NM", card_language="en", rarity="rare",
             asking_price=Decimal("8000.00"), currency="THB", quantity=1, status="active",
         )
         self.conversation = Conversation.objects.create(
@@ -37,7 +38,13 @@ class DealPriceDataSnapshotTests(ApiTestCase):
         deal = self.reserve()
         self.assertEqual(deal.card_name, "Charizard ex")
         self.assertEqual(deal.card_set, "Obsidian Flames")
+        self.assertEqual(deal.set_code, "OBF")
+        self.assertEqual(deal.card_number, "125/197")
+        self.assertEqual(deal.card_language, "en")
         self.assertEqual(deal.condition, "NM")
+        self.assertEqual(deal.asking_price, Decimal("8000.00"))
+        self.assertEqual(deal.quantity, 1)
+        self.assertEqual(deal.variant_key, "en:obf:125/197:NM")
         self.assertEqual(str(deal.final_price), "7500.00")
 
     def test_snapshot_survives_listing_edit(self):
@@ -89,3 +96,13 @@ class DealPriceDataSnapshotTests(ApiTestCase):
         confirm_deal(deal, self.buyer)
         deal.refresh_from_db()
         self.assertEqual(deal.completed_at, completed_at)
+
+    def test_completed_deal_creates_price_observation(self):
+        deal = self.reserve()
+        confirm_deal(deal, self.buyer)
+        confirm_deal(deal, self.seller)
+        deal.refresh_from_db()
+        observation = PriceObservation.objects.get(deal=deal)
+        self.assertEqual(observation.variant_key, deal.variant_key)
+        self.assertEqual(observation.final_price, Decimal("7500.00"))
+        self.assertEqual(observation.asking_price, Decimal("8000.00"))

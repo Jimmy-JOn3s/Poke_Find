@@ -67,3 +67,27 @@ class SavedListing(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=("user", "listing"), name="unique_saved_listing")]
 
+
+class PriceObservation(models.Model):
+    """One row per completed deal, used for future Thai market price aggregation."""
+    deal = models.OneToOneField("messaging.Deal", on_delete=models.CASCADE, related_name="price_observation")
+    variant_key = models.CharField(max_length=200, db_index=True)
+    card_language = models.CharField(max_length=2, choices=Listing.CardLanguage.choices)
+    set_code = models.CharField(max_length=40, blank=True, db_index=True)
+    card_number = models.CharField(max_length=40, blank=True, db_index=True)
+    condition = models.CharField(max_length=2, choices=Listing.Condition.choices)
+    card_name = models.CharField(max_length=180, blank=True)
+    card_set = models.CharField(max_length=180, blank=True)
+    asking_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    final_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    currency = models.CharField(max_length=3, choices=Listing.Currency.choices)
+    quantity = models.PositiveIntegerField(default=1)
+    traded_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-traded_at",)
+        indexes = [
+            models.Index(fields=("variant_key", "currency")),
+        ]
+

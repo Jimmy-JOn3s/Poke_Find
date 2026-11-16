@@ -3,8 +3,11 @@
 The `feat/price-data` branch records the agreed price/currency and the listing's
 card name, set, and condition when a deal opens. A price observation becomes a
 completed trade only after both parties confirm, which sets `completed_at`.
-Pending and cancelled deals must be excluded from any future market-price query.
-This branch does not add a market-price endpoint or analytics calculations.
+Pending and cancelled deals must be excluded from market-price queries.
+Completed deals create a `PriceObservation` row keyed by `variant_key`
+(language, set code, card number, condition). `GET /api/market/variant/` returns
+sale counts and whether the 20-sale threshold is met; `recommendation` stays
+null until Phase 5 pricing logic ships.
 
 ## Automated checks
 
