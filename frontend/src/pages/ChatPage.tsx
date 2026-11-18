@@ -39,6 +39,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     dealWaitingSuffix: "ยืนยันว่าซื้อขายสำเร็จ",
     dealCompleted: "ซื้อขายสำเร็จแล้ว",
     youConfirmed: "คุณยืนยันแล้ว",
+    dealPartialStaleHint: "หากไม่สำเร็จ ระบบจะยกเลิกดีลอัตโนมัติหลัง 7 วัน (เมื่อมีเพียงฝ่ายเดียวยืนยัน) หรือติดต่อทีมงาน",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
@@ -63,6 +64,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     dealWaitingSuffix: "to confirm the trade is complete.",
     dealCompleted: "Trade completed",
     youConfirmed: "You confirmed",
+    dealPartialStaleHint: "If the trade does not finish, this deal auto-cancels after 7 days when only one side confirmed. Contact support if needed.",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -389,7 +391,10 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                   </button>
                 )}
                 {myDealConfirmed && !theirDealConfirmed && (
-                  <p className="text-[10px] text-muted-foreground font-mono">{copy.youConfirmed}</p>
+                  <>
+                    <p className="text-[10px] text-muted-foreground font-mono">{copy.youConfirmed}</p>
+                    <p className="text-[10px] text-muted-foreground">{copy.dealPartialStaleHint}</p>
+                  </>
                 )}
                 {canCancelDeal && (
                   <button type="button" onClick={() => void cancelDeal()} className="w-full py-2 text-xs btn-danger-outline">

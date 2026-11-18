@@ -79,6 +79,7 @@ class Deal(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACCEPTED)
     buyer_confirmed = models.BooleanField(default=False)
     seller_confirmed = models.BooleanField(default=False)
+    first_confirmed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

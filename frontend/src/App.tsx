@@ -324,7 +324,22 @@ export default function App() {
       case "analytics":
         return <AnalyticsPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("profile")} />;
       case "admin":
-        return <AdminPage lang={lang} currentUser={currentUser} onBack={() => setCurrentPage("settings")} />;
+        return (
+          <AdminPage
+            lang={lang}
+            currentUser={currentUser}
+            onBack={() => setCurrentPage("settings")}
+            onOpenListing={async listingId => {
+              const listing = await api.getListing(listingId);
+              setSelectedListing(listing);
+              setCurrentPage("listing");
+            }}
+            onOpenProfile={userId => {
+              setViewUserId(String(userId));
+              setCurrentPage("profile");
+            }}
+          />
+        );
       default:
         return <DiscoverPage lang={lang} listings={listings} loading={loading} error={error}
           displayCurrency={currency} onRetry={() => void reload()}
