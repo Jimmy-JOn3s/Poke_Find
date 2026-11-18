@@ -80,6 +80,20 @@ class ReportApiTests(ApiTestCase):
         self.assertGreaterEqual(users.data["count"], 3)
 
         report_id = ContentReport.objects.first().id
+        reports = self.client.get("/api/admin/reports/")
+        self.assertEqual(reports.status_code, status.HTTP_200_OK)
+        row = reports.data["results"][0]
+        self.assertIn("target_detail", row)
+        self.assertEqual(row["target_detail"]["listing"]["id"], self.listing.id)
+        self.assertEqual(row["target_detail"]["listing"]["product_name"], "Pikachu ex")
+        self.assertIsNone(row["target_detail"]["message"])
+        self.assertNotIn("deals", row["target_detail"])
+
+        market = self.client.get("/api/admin/market-intelligence/")
+        self.assertEqual(market.status_code, status.HTTP_200_OK)
+        self.assertIn("recent_transactions", market.data)
+        self.assertIn("top_cards", market.data)
+
         updated = self.client.patch(f"/api/admin/reports/{report_id}/", {
             "status": "resolved",
             "admin_notes": "Removed listing",
@@ -87,3 +101,43 @@ class ReportApiTests(ApiTestCase):
         self.assertEqual(updated.status_code, status.HTTP_200_OK)
         self.assertEqual(updated.data["status"], "resolved")
         self.assertEqual(updated.data["resolved_by_name"], "Admin")
+        self.assertEqual(updated.data["target_detail"]["listing"]["id"], self.listing.id)
+
+    def test_staff_can_hide_listing_via_report_action(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username="admin-action", email="admin-action@example.com", password=PASSWORD, display_name="Admin", is_staff=True,
+        )
+        ContentReport.objects.create(
+            reporter=self.buyer, category="listing", reason="scam", listing=self.listing,
+        )
+        self.auth(admin)
+        report_id = ContentReport.objects.first().id
+        response = self.client.post(f"/api/admin/reports/{report_id}/action/", {
+            "action": "hide_listing",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.listing.refresh_from_db()
+        self.assertEqual(self.listing.status, "hidden")
+        self.assertEqual(response.data["report"]["status"], "resolved")
+
+    def test_staff_can_remove_message_via_report_action(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username="admin-msg", email="admin-msg@example.com", password=PASSWORD, display_name="Admin", is_staff=True,
+        )
+        ContentReport.objects.create(
+            reporter=self.buyer, category="message", reason="harassment", message=self.message,
+        )
+        self.auth(admin)
+        report_id = ContentReport.objects.first().id
+        response = self.client.post(f"/api/admin/reports/{report_id}/action/", {
+            "action": "remove_message",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.message.refresh_from_db()
+        self.assertIn("removed", self.message.body.lower())

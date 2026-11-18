@@ -13,6 +13,8 @@ interface Props {
   isAuthenticated: boolean;
   onClose: () => void;
   onSignIn: () => void;
+  defaultReason?: ReportReason;
+  initialDetails?: string;
 }
 
 const REASONS: { value: ReportReason; labelKey: keyof typeof i18n.en }[] = [
@@ -24,10 +26,10 @@ const REASONS: { value: ReportReason; labelKey: keyof typeof i18n.en }[] = [
   { value: "other", labelKey: "reportReasonOther" },
 ];
 
-export default function ReportModal({ lang, target, isAuthenticated, onClose, onSignIn }: Props) {
+export default function ReportModal({ lang, target, isAuthenticated, onClose, onSignIn, defaultReason = "scam", initialDetails = "" }: Props) {
   const t = i18n[lang];
-  const [reason, setReason] = useState<ReportReason>("scam");
-  const [details, setDetails] = useState("");
+  const [reason, setReason] = useState<ReportReason>(defaultReason);
+  const [details, setDetails] = useState(initialDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);

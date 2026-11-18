@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppLang, ReviewContext, User } from "../types";
 import { api, type ApiConversation, type ApiDeal, type ApiMessage, type ApiOffer } from "../lib/api";
 import { formatMoney } from "../lib/money";
+import ReportModal from "../components/ReportModal";
 import ReviewPromptModal from "../components/ReviewPromptModal";
 
 
@@ -39,6 +40,9 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     dealWaitingSuffix: "ยืนยันว่าซื้อขายสำเร็จ",
     dealCompleted: "ซื้อขายสำเร็จแล้ว",
     youConfirmed: "คุณยืนยันแล้ว",
+    dealPartialStaleHint: "หากไม่สำเร็จ ระบบจะยกเลิกดีลอัตโนมัติหลัง 7 วัน (เมื่อมีเพียงฝ่ายเดียวยืนยัน)",
+    dealContactSupport: "ติดต่อทีมงาน",
+    dealSupportReportHint: "ทีมงานจะตรวจในแผงผู้ดูแล",
     reviewBanner: "ทิ้งรีวิวให้", leaveReview: "เขียนรีวิว",
   } : {
     title: "Messages", empty: "No conversations yet", signIn: "Sign in to view messages",
@@ -63,6 +67,9 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     dealWaitingSuffix: "to confirm the trade is complete.",
     dealCompleted: "Trade completed",
     youConfirmed: "You confirmed",
+    dealPartialStaleHint: "If the trade does not finish, this deal auto-cancels after 7 days when only one side confirmed.",
+    dealContactSupport: "Contact support",
+    dealSupportReportHint: "Staff review reports in the admin dashboard",
     reviewBanner: "Leave a review for", leaveReview: "Leave a Review",
   };
   const inbox = lang === "th" ? {
@@ -92,6 +99,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [loading, setLoading] = useState(false);
   const [reviewPrompt, setReviewPrompt] = useState<ReviewContext | null>(null);
   const [confirmingDeal, setConfirmingDeal] = useState(false);
+  const [showDealSupportReport, setShowDealSupportReport] = useState(false);
 
   const maybePromptReview = (deal: ApiDeal) => {
     if (deal.status !== "completed" || deal.reviewer_has_reviewed === true || !deal.counterparty_id) return;
@@ -389,7 +397,21 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
                   </button>
                 )}
                 {myDealConfirmed && !theirDealConfirmed && (
-                  <p className="text-[10px] text-muted-foreground font-mono">{copy.youConfirmed}</p>
+                  <>
+                    <p className="text-[10px] text-muted-foreground font-mono">{copy.youConfirmed}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {copy.dealPartialStaleHint}{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowDealSupportReport(true)}
+                        title={copy.dealSupportReportHint}
+                        className="text-primary font-semibold underline underline-offset-2 hover:opacity-80"
+                      >
+                        {copy.dealContactSupport}
+                      </button>
+                      .
+                    </p>
+                  </>
                 )}
                 {canCancelDeal && (
                   <button type="button" onClick={() => void cancelDeal()} className="w-full py-2 text-xs btn-danger-outline">
@@ -426,6 +448,26 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
       )}
 
       </div>
+      {showDealSupportReport && active?.deal && (
+        <ReportModal
+          key={active.deal.id}
+          lang={lang}
+          isAuthenticated={isAuthenticated}
+          onSignIn={onSignIn}
+          onClose={() => setShowDealSupportReport(false)}
+          defaultReason="other"
+          initialDetails={
+            lang === "th"
+              ? `ดีล #${active.deal.id} — ขอความช่วยเหลือเรื่องดีลที่ยืนยันแล้วฝ่ายเดียว (คู่สนทนา: ${counterpartyForDeal})`
+              : `Deal #${active.deal.id} — need help with a partially confirmed deal (counterparty: ${counterpartyForDeal})`
+          }
+          target={{
+            category: "listing",
+            listingId: String(active.listing.id),
+            label: active.listing.product_name,
+          }}
+        />
+      )}
       {reviewPrompt && (
         <ReviewPromptModal
           lang={lang}

@@ -115,6 +115,27 @@ never put into a build.
 The seed command is safe to run again and also creates sample listings, a
 conversation, messages, and an offer.
 
+`seed_market_intelligence` (also `DJANGO_DEBUG=1`, same `DEMO_SEED_PASSWORD`)
+adds **25 completed sales** of one card (`Pikachu ex` / `SV2a 151`) with
+spread prices so the staff **Market intelligence** panel shows volume, total
+revenue, and **average sale price**. Safe to re-run; it replaces prior
+`MI-DEMO` listings.
+
+```bash
+.venv/bin/python backend/manage.py seed_market_intelligence
+```
+
+Open accepted deals that never finish are auto-cancelled by `release_stale_deals`
+(defaults: **14 days** with no confirmations, **7 days** after only one party confirms).
+Run it on a schedule in production, e.g. daily:
+
+```bash
+.venv/bin/python backend/manage.py release_stale_deals
+```
+
+Staff can also **force-cancel** a stuck deal or **release stale deals** from the admin
+dashboard (**Stuck open deals**).
+
 ## Tests and production build
 
 From the repository root:

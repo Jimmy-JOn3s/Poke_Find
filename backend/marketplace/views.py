@@ -41,7 +41,9 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Listing.objects.select_related("seller")
         user = self.request.user
-        if user.is_authenticated:
+        if self.action == "retrieve" and user.is_authenticated and user.is_staff:
+            pass
+        elif user.is_authenticated:
             queryset = queryset.filter(Q(status=Listing.Status.ACTIVE) | Q(seller=user))
         else:
             queryset = queryset.filter(status=Listing.Status.ACTIVE)

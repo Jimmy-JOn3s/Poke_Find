@@ -109,6 +109,93 @@ export interface ApiAdminVerification {
 export type ReportReason = "spam" | "scam" | "fake_listing" | "harassment" | "inappropriate" | "other";
 export type ReportCategory = "listing" | "user" | "message";
 export type ReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
+export type AdminReportAction = "hide_listing" | "deactivate_user" | "remove_message";
+
+export interface AdminCompletedDeal {
+  id: number;
+  listing_id: number;
+  status: string;
+  final_price: string;
+  currency: Currency;
+  card_name: string;
+  card_set: string;
+  condition: CardCondition | "";
+  listing_product_name: string;
+  listing_image_url: string;
+  listing_photo: string;
+  listing_card_number: string;
+  buyer_name: string;
+  seller_name: string;
+  buyer_confirmed: boolean;
+  seller_confirmed: boolean;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface AdminReportListingSnapshot {
+  id: number;
+  seller: { id: number; display_name: string; email: string; role: UserRole };
+  product_name: string;
+  set_name: string;
+  set_code: string;
+  card_number: string;
+  condition: CardCondition;
+  card_language: CardLanguage;
+  rarity: CardRarity;
+  asking_price: string;
+  currency: Currency;
+  quantity: number;
+  description: string;
+  image_url: string;
+  photo: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AdminReportTargetDetail {
+  listing: AdminReportListingSnapshot | null;
+  message: {
+    id: number;
+    body: string;
+    author_id: number;
+    author_name: string;
+    conversation_id: number;
+    created_at: string;
+  } | null;
+  user: {
+    id: number;
+    display_name: string;
+    email: string;
+    role: UserRole;
+    is_verified_seller: boolean;
+    date_joined: string;
+  } | null;
+}
+
+export interface AdminOpenDeal {
+  id: number;
+  listing_id: number;
+  listing_name: string;
+  final_price: string;
+  currency: Currency;
+  status: string;
+  card_name: string;
+  card_set: string;
+  buyer_confirmed: boolean;
+  seller_confirmed: boolean;
+  first_confirmed_at: string | null;
+  created_at: string;
+  buyer_name: string;
+  seller_name: string;
+  is_stale: boolean;
+}
+
+export interface AdminMarketIntelligence {
+  completed_deals: number;
+  revenue_by_currency: Record<string, string>;
+  top_cards: { name: string; card_set: string; currency: Currency; sold: number; revenue: string; avg_price: string }[];
+  recent_transactions: AdminCompletedDeal[];
+}
 
 export interface ApiContentReport {
   id: number;
@@ -119,6 +206,7 @@ export interface ApiContentReport {
   admin_notes: string;
   reporter: { id: number; display_name: string; email: string; role: UserRole };
   target: { kind: string; id: number; label: string } | null;
+  target_detail?: AdminReportTargetDetail;
   resolved_by_name: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -420,6 +508,10 @@ export const api = {
     const result = await request<{ results: ApiListing[] }>(`/listings/${buildListingQuery(filters)}`);
     return result.results.map(mapListing);
   },
+  async getListing(id: number): Promise<Listing> {
+    const item = await request<ApiListing>(`/listings/${id}/`);
+    return mapListing(item);
+  },
   register(payload: Record<string, unknown>): Promise<AuthResponse> {
     return request("/auth/register/", { method: "POST", body: JSON.stringify(payload) });
   },
@@ -536,6 +628,20 @@ export const api = {
   adminOverview(): Promise<AdminOverview> {
     return request("/admin/overview/");
   },
+  adminMarketIntelligence(): Promise<AdminMarketIntelligence> {
+    return request("/admin/market-intelligence/");
+  },
+  async adminOpenDeals(staleOnly?: boolean): Promise<AdminOpenDeal[]> {
+    const query = staleOnly ? "?stale=1" : "";
+    const result = await request<{ results: AdminOpenDeal[] }>(`/admin/deals/open/${query}`);
+    return result.results ?? [];
+  },
+  adminForceCancelDeal(id: number): Promise<{ status: string; deal_id: number; listing_id: number }> {
+    return request(`/admin/deals/${id}/force-cancel/`, { method: "POST", body: "{}" });
+  },
+  adminExpireStaleDeals(): Promise<{ released: number }> {
+    return request("/admin/deals/expire-stale/", { method: "POST", body: "{}" });
+  },
   async adminUsers(): Promise<AdminUserRow[]> {
     const result = await request<{ results: AdminUserRow[] }>("/admin/users/");
     return result.results;
@@ -547,6 +653,12 @@ export const api = {
   },
   updateAdminReport(id: number, payload: { status?: ReportStatus; admin_notes?: string }): Promise<ApiContentReport> {
     return request(`/admin/reports/${id}/`, { method: "PATCH", body: JSON.stringify(payload) });
+  },
+  adminReportAction(
+    id: number,
+    payload: { action: AdminReportAction; mark_resolved?: boolean; admin_notes?: string },
+  ): Promise<{ detail: string; report: ApiContentReport }> {
+    return request(`/admin/reports/${id}/action/`, { method: "POST", body: JSON.stringify(payload) });
   },
   submitVerification(documentType: "id" | "passport", idDocument: File, selfie?: File | null): Promise<NonNullable<ApiUser["verification_submission"]>> {
     const form = new FormData();
