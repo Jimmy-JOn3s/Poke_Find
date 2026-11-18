@@ -3,6 +3,8 @@ import type { AppLang, Currency, Listing, Page, ReviewContext, ThemePreference, 
 import { applyTheme, storedTheme, THEME_STORAGE_KEY } from "./lib/theme";
 import Navigation from "./components/Navigation";
 import CreateListingModal from "./components/CreateListingModal";
+import VerifyIdentityListingModal from "./components/VerifyIdentityListingModal";
+import { canCreateListing, requiresPersonalIdVerification } from "./lib/listingEligibility";
 import DiscoverPage from "./pages/DiscoverPage";
 import AuthPage from "./pages/AuthPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
@@ -47,6 +49,7 @@ export default function App() {
   const [viewUserId, setViewUserId] = useState<string | undefined>();
   const [reviewContext, setReviewContext] = useState<ReviewContext | undefined>();
   const [showCreateListing, setShowCreateListing] = useState(false);
+  const [showListingVerifyModal, setShowListingVerifyModal] = useState(false);
   const [editListing, setEditListing] = useState<Listing | undefined>();
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -55,6 +58,23 @@ export default function App() {
   const { listings, loading, error, reload, create, remove, setListings } = useListings();
 
   const isAuthenticated = Boolean(currentUser);
+
+  const requestCreateListing = () => {
+    if (!isAuthenticated || !currentUser) {
+      setCurrentPage("auth");
+      return;
+    }
+    if (requiresPersonalIdVerification(currentUser)) {
+      setShowListingVerifyModal(true);
+      return;
+    }
+    if (!canCreateListing(currentUser)) {
+      setActionError(i18n[lang].verifyBeforeListing);
+      setCurrentPage("settings");
+      return;
+    }
+    setShowCreateListing(true);
+  };
 
   const refreshCurrentUser = async () => {
     const user = await api.me();
@@ -309,18 +329,7 @@ export default function App() {
         return <DiscoverPage lang={lang} listings={listings} loading={loading} error={error}
           displayCurrency={currency} onRetry={() => void reload()}
           onSelectListing={listing => { setSelectedListing(listing); setCurrentPage("listing"); }}
-          onCreateListing={() => {
-            if (!isAuthenticated) {
-              setCurrentPage("auth");
-              return;
-            }
-            if (!currentUser?.emailVerified && !currentUser?.verified) {
-              setActionError(i18n[lang].verifyBeforeListing);
-              setCurrentPage("settings");
-              return;
-            }
-            setShowCreateListing(true);
-          }}
+          onCreateListing={requestCreateListing}
           isAuthenticated={isAuthenticated} />;
     }
   };
@@ -334,6 +343,17 @@ export default function App() {
       <main className={`flex-1 overflow-hidden flex flex-col min-w-0 ${showNav ? "bottom-safe md:bottom-0 md:pl-56" : ""}`}>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>
       </main>
+      {showListingVerifyModal && currentUser && (
+        <VerifyIdentityListingModal
+          lang={lang}
+          currentUser={currentUser}
+          onClose={() => setShowListingVerifyModal(false)}
+          onGoToSettings={() => {
+            setShowListingVerifyModal(false);
+            setCurrentPage("settings");
+          }}
+        />
+      )}
       {showCreateListing && <CreateListingModal lang={lang} onClose={() => { setShowCreateListing(false); setEditListing(undefined); }}
         onSubmit={(data, photoFile) => void handleCreateListing(data, photoFile)} editListing={editListing} sellerRole={currentUser?.role || "personal"} />}
     </div>

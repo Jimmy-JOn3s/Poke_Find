@@ -42,6 +42,20 @@ class ListingApiTests(ApiTestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["product_name"], "Charizard ex")
 
+    def test_personal_seller_needs_identity_to_create(self):
+        personal = User.objects.create_user(
+            username="personal", email="personal@example.com", password="password123",
+            display_name="Personal Seller", role="personal", is_email_verified=True,
+        )
+        self.client.force_authenticate(personal)
+        response = self.client.post("/api/listings/", {
+            "product_name": "Mew ex", "set_name": "151", "set_code": "SV2A",
+            "card_number": "205/165", "condition": "LP", "card_language": "th",
+            "rarity": "secret", "asking_price": "2100.00", "currency": "THB",
+            "quantity": 1, "description": "Thai print", "status": "active",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_authenticated_seller_can_create_and_only_owner_can_edit(self):
         self.client.force_authenticate(self.seller)
         response = self.client.post("/api/listings/", {

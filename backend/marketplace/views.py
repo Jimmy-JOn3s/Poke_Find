@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from accounts.models import User
+
 from .models import Listing, SavedListing
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ListingSerializer
@@ -61,6 +63,10 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        if user.role == User.Role.PERSONAL and not user.is_verified_seller:
+            raise PermissionDenied(
+                "Complete identity verification (national ID or passport) before creating a listing.",
+            )
         if not (user.is_email_verified or user.is_verified_seller):
             raise PermissionDenied(
                 "Verify your email or complete identity verification before creating a listing.",
