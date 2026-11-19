@@ -57,6 +57,7 @@ class StaleDealTests(ApiTestCase):
         confirm_deal(deal, self.buyer)
         self.listing.refresh_from_db()
         self.assertEqual(self.listing.status, Listing.Status.RESERVED)
+        self.auth(self.buyer)
         self.assertEqual(self.client.post(f"/api/deals/{deal.id}/cancel/").status_code, 400)
         force_cancel_deal(deal)
         self.listing.refresh_from_db()

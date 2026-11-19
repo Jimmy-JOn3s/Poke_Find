@@ -60,7 +60,7 @@ export default function CreateListingModal({ lang, onClose, onSubmit, editListin
     };
   }, [objectPreviewUrl]);
 
-  const previewImageUrl = objectPreviewUrl || (photoFile ? null : editListing?.imageUrl);
+  const previewImageUrl = objectPreviewUrl || (photoFile ? undefined : editListing?.imageUrl);
 
   const [gradientFrom, gradientTo] = editListing ? [editListing.gradientFrom, editListing.gradientTo] : GRAD_PRESETS[gradIdx];
 

@@ -10,3 +10,8 @@ class EmailDeliveryFailed(APIException):
     status_code = 503
     default_detail = EMAIL_DELIVERY_FAILED
     default_code = "email_delivery_failed"
+
+    def __init__(self, detail=None):
+        super().__init__(detail)
+        # The frontend tells delivery failures apart from other errors by this code.
+        self.detail = {"detail": self.detail, "code": self.default_code}

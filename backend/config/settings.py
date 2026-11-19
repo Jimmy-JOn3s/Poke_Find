@@ -185,6 +185,7 @@ if os.getenv("REDIS_URL"):
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": os.environ["REDIS_URL"]}}
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
+MARKET_PRICE_MIN_SALES = int(os.getenv("MARKET_PRICE_MIN_SALES", "20"))
 # Open accepted deals with no confirmations are auto-cancelled after this many days (see release_stale_deals).
 STALE_DEAL_DAYS_OPEN = int(os.getenv("STALE_DEAL_DAYS_OPEN", "14"))
 # Accepted deals with only one party confirmed are auto-cancelled after this many days from first confirm.
