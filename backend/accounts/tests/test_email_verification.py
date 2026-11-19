@@ -97,9 +97,30 @@ class EmailVerificationTests(ApiTestCase):
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_email_verified_user_can_create_a_listing_without_identity(self):
+    def test_personal_email_verified_user_cannot_list_without_identity(self):
         self.user.is_email_verified = True
         self.user.save(update_fields=["is_email_verified"])
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/listings/", {
+            "product_name": "Pikachu",
+            "set_name": "Base",
+            "set_code": "BS",
+            "card_number": "58",
+            "condition": "NM",
+            "card_language": "en",
+            "rarity": "rare",
+            "asking_price": "100.00",
+            "currency": "THB",
+            "quantity": 1,
+            "description": "",
+            "status": "active",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_business_email_verified_user_can_list_without_identity(self):
+        self.user.role = User.Role.BUSINESS
+        self.user.is_email_verified = True
+        self.user.save(update_fields=["role", "is_email_verified"])
         self.client.force_authenticate(self.user)
         response = self.client.post("/api/listings/", {
             "product_name": "Pikachu",

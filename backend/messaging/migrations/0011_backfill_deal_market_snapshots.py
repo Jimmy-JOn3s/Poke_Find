@@ -48,7 +48,7 @@ def backfill_market_snapshots(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("messaging", "0009_deal_market_snapshot_fields"),
+        ("messaging", "0010_deal_market_snapshot_fields"),
     ]
 
     operations = [

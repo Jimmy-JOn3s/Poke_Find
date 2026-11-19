@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("messaging", "0008_offer_declined_by_deal"),
+        ("messaging", "0009_deal_first_confirmed_at"),
     ]
 
     operations = [

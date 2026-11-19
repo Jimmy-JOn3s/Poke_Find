@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from marketplace.models import Listing
-from messaging.models import Message
+from messaging.models import Deal, Message
 
 from .models import ContentReport
 
@@ -107,6 +107,97 @@ class ContentReportSerializer(serializers.ModelSerializer):
 
     def get_resolved_by_name(self, obj):
         return obj.resolved_by.display_name if obj.resolved_by_id else None
+
+
+class AdminReportSellerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "display_name", "email", "role")
+        read_only_fields = fields
+
+
+class AdminReportListingSerializer(serializers.ModelSerializer):
+    seller = AdminReportSellerSerializer(read_only=True)
+
+    class Meta:
+        model = Listing
+        fields = (
+            "id", "seller", "product_name", "set_name", "set_code", "card_number",
+            "condition", "card_language", "rarity", "asking_price", "currency",
+            "quantity", "description", "image_url", "photo", "status", "created_at",
+        )
+        read_only_fields = fields
+
+
+class AdminReportUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "display_name", "email", "role", "is_verified_seller", "date_joined")
+        read_only_fields = fields
+
+
+class AdminReportMessageSerializer(serializers.ModelSerializer):
+    author_name = serializers.CharField(source="author.display_name", read_only=True)
+    author_id = serializers.IntegerField(read_only=True)
+    conversation_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ("id", "body", "author_id", "author_name", "conversation_id", "created_at")
+        read_only_fields = fields
+
+
+class AdminCompletedDealSerializer(serializers.ModelSerializer):
+    buyer_name = serializers.CharField(source="conversation.buyer.display_name", read_only=True)
+    seller_name = serializers.CharField(source="conversation.seller.display_name", read_only=True)
+    listing_id = serializers.IntegerField(source="conversation.listing_id", read_only=True)
+    listing_product_name = serializers.CharField(source="conversation.listing.product_name", read_only=True)
+    listing_image_url = serializers.CharField(source="conversation.listing.image_url", read_only=True)
+    listing_photo = serializers.ImageField(source="conversation.listing.photo", read_only=True)
+    listing_card_number = serializers.CharField(source="conversation.listing.card_number", read_only=True)
+
+    class Meta:
+        model = Deal
+        fields = (
+            "id", "listing_id", "status", "final_price", "currency",
+            "card_name", "card_set", "condition",
+            "listing_product_name", "listing_image_url", "listing_photo", "listing_card_number",
+            "buyer_name", "seller_name",
+            "buyer_confirmed", "seller_confirmed", "completed_at", "created_at",
+        )
+        read_only_fields = fields
+
+
+class AdminContentReportSerializer(ContentReportSerializer):
+    target_detail = serializers.SerializerMethodField()
+
+    class Meta(ContentReportSerializer.Meta):
+        fields = ContentReportSerializer.Meta.fields + ("target_detail",)
+
+    def get_target_detail(self, obj):
+        listing = None
+        message = None
+        user = None
+
+        if obj.listing_id:
+            listing = obj.listing
+        elif obj.reported_user_id:
+            user = obj.reported_user
+        elif obj.message_id:
+            message = obj.message
+            listing = message.conversation.listing
+
+        return {
+            "listing": AdminReportListingSerializer(listing).data if listing else None,
+            "message": AdminReportMessageSerializer(message).data if message else None,
+            "user": AdminReportUserSerializer(user).data if user else None,
+        }
+
+
+class AdminReportActionSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=("hide_listing", "deactivate_user", "remove_message"))
+    mark_resolved = serializers.BooleanField(required=False, default=True)
+    admin_notes = serializers.CharField(required=False, allow_blank=True, max_length=2000)
 
 
 class AdminReportUpdateSerializer(serializers.ModelSerializer):

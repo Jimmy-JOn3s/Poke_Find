@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("messaging", "0010_backfill_deal_market_snapshots"),
+        ("messaging", "0011_backfill_deal_market_snapshots"),
         ("marketplace", "0002_listing_image_url"),
     ]
 

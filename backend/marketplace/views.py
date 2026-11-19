@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from accounts.models import User
+
 from .models import Listing, SavedListing
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ListingSerializer
@@ -39,7 +41,9 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Listing.objects.select_related("seller")
         user = self.request.user
-        if user.is_authenticated:
+        if self.action == "retrieve" and user.is_authenticated and user.is_staff:
+            pass
+        elif user.is_authenticated:
             queryset = queryset.filter(Q(status=Listing.Status.ACTIVE) | Q(seller=user))
         else:
             queryset = queryset.filter(status=Listing.Status.ACTIVE)
@@ -61,6 +65,10 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        if user.role == User.Role.PERSONAL and not user.is_verified_seller:
+            raise PermissionDenied(
+                "Complete identity verification (national ID or passport) before creating a listing.",
+            )
         if not (user.is_email_verified or user.is_verified_seller):
             raise PermissionDenied(
                 "Verify your email or complete identity verification before creating a listing.",

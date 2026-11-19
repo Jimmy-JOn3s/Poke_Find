@@ -138,6 +138,9 @@ def confirm_deal(deal: Deal, actor) -> Deal:
     flag = "buyer_confirmed" if actor.id == conversation.buyer_id else "seller_confirmed"
     if not Deal.objects.filter(pk=deal.pk, status=Deal.Status.ACCEPTED).update(**{flag: True}):
         raise ValidationError("This deal is no longer open")
+    after = Deal.objects.filter(pk=deal.pk).values("buyer_confirmed", "seller_confirmed").first()
+    if after and after["buyer_confirmed"] ^ after["seller_confirmed"]:
+        Deal.objects.filter(pk=deal.pk, first_confirmed_at__isnull=True).update(first_confirmed_at=timezone.now())
     completed = Deal.objects.filter(
         pk=deal.pk, status=Deal.Status.ACCEPTED, buyer_confirmed=True, seller_confirmed=True,
     ).update(status=Deal.Status.COMPLETED, completed_at=timezone.now())
@@ -149,24 +152,57 @@ def confirm_deal(deal: Deal, actor) -> Deal:
     return finished
 
 
-@transaction.atomic
-def cancel_deal(deal: Deal, actor) -> Deal:
-    conversation = Conversation.objects.get(pk=deal.conversation_id)
-    if not conversation.has_participant(actor):
-        raise PermissionDenied("Only deal participants may cancel")
-    lock_listing(conversation.listing_id)
-    cancelled = Deal.objects.filter(
-        pk=deal.pk, status=Deal.Status.ACCEPTED, buyer_confirmed=False, seller_confirmed=False,
-    ).update(status=Deal.Status.CANCELLED)
-    if not cancelled:
-        raise ValidationError("Only an open deal that nobody has confirmed yet can be cancelled")
-    # Put the card back on sale unless another live deal still holds it (possible only with legacy data).
+def _release_listing_after_cancel(deal: Deal, conversation: Conversation) -> None:
     if not Deal.objects.filter(conversation__listing_id=conversation.listing_id, status__in=LIVE_DEAL_STATUSES).exists():
         if _move_listing(conversation.listing_id, Listing.Status.RESERVED, Listing.Status.ACTIVE):
             Offer.objects.filter(
                 declined_by_deal=deal, status=Offer.Status.DECLINED,
             ).update(status=Offer.Status.PENDING, declined_by_deal=None, updated_at=timezone.now())
+
+
+@transaction.atomic
+def _cancel_accepted_deal(deal: Deal, *, require_unconfirmed: bool) -> Deal:
+    conversation = Conversation.objects.get(pk=deal.conversation_id)
+    lock_listing(conversation.listing_id)
+    queryset = Deal.objects.filter(pk=deal.pk, status=Deal.Status.ACCEPTED)
+    if require_unconfirmed:
+        queryset = queryset.filter(buyer_confirmed=False, seller_confirmed=False)
+    cancelled = queryset.update(
+        status=Deal.Status.CANCELLED,
+        buyer_confirmed=False,
+        seller_confirmed=False,
+        first_confirmed_at=None,
+    )
+    if not cancelled:
+        if require_unconfirmed:
+            raise ValidationError("Only an open deal that nobody has confirmed yet can be cancelled")
+        raise ValidationError("This deal is no longer open")
+    _release_listing_after_cancel(deal, conversation)
     return Deal.objects.select_related("conversation").get(pk=deal.pk)
+
+
+@transaction.atomic
+def cancel_deal(deal: Deal, actor) -> Deal:
+    conversation = Conversation.objects.get(pk=deal.conversation_id)
+    if not conversation.has_participant(actor):
+        raise PermissionDenied("Only deal participants may cancel")
+    return _cancel_accepted_deal(deal, require_unconfirmed=True)
+
+
+@transaction.atomic
+def force_cancel_deal(deal: Deal) -> Deal:
+    return _cancel_accepted_deal(deal, require_unconfirmed=False)
+
+
+@transaction.atomic
+def expire_stale_deals() -> int:
+    from .stale_deals import stale_open_deals_queryset
+
+    count = 0
+    for deal in list(stale_open_deals_queryset()):
+        force_cancel_deal(deal)
+        count += 1
+    return count
 
 
 @transaction.atomic
