@@ -28,6 +28,24 @@ def is_deal_stale(deal: Deal, *, now=None) -> bool:
     return deal.created_at <= now - timedelta(days=stale_deal_days_open())
 
 
+class StaleOutcome:
+    """What release_stale_deals does with an overdue open deal."""
+
+    COMPLETE = "complete"  # buyer confirmed receipt, seller never did: the sale happened
+    AWAIT_BUYER = "await_buyer"  # seller confirmed, buyer never did: keep it reserved for staff to review
+    CANCEL = "cancel"  # nobody confirmed: release the listing
+
+
+def stale_outcome(deal: Deal, *, now=None) -> str | None:
+    if not is_deal_stale(deal, now=now):
+        return None
+    if deal.buyer_confirmed:
+        return StaleOutcome.COMPLETE
+    if deal.seller_confirmed:
+        return StaleOutcome.AWAIT_BUYER
+    return StaleOutcome.CANCEL
+
+
 def stale_open_deals_queryset():
     now = timezone.now()
     open_cutoff = now - timedelta(days=stale_deal_days_open())

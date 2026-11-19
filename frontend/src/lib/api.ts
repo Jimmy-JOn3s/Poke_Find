@@ -188,6 +188,8 @@ export interface AdminOpenDeal {
   buyer_name: string;
   seller_name: string;
   is_stale: boolean;
+  /** What release_stale_deals will do with this deal; null while it is not overdue. */
+  stale_outcome: "complete" | "await_buyer" | "cancel" | null;
 }
 
 export interface AdminMarketIntelligence {
@@ -639,7 +641,7 @@ export const api = {
   adminForceCancelDeal(id: number): Promise<{ status: string; deal_id: number; listing_id: number }> {
     return request(`/admin/deals/${id}/force-cancel/`, { method: "POST", body: "{}" });
   },
-  adminExpireStaleDeals(): Promise<{ released: number }> {
+  adminExpireStaleDeals(): Promise<{ completed: number; awaiting_buyer: number; cancelled: number; released: number }> {
     return request("/admin/deals/expire-stale/", { method: "POST", body: "{}" });
   },
   async adminUsers(): Promise<AdminUserRow[]> {

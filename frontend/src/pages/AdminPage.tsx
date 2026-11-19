@@ -414,6 +414,15 @@ export default function AdminPage({ lang, currentUser, onBack, onOpenListing, on
                       ? (lang === "th" ? "ยืนยันแล้วบางส่วน" : "Partially confirmed")
                       : (lang === "th" ? "ยังไม่มีใครยืนยัน" : "No confirmations yet")}
                   </p>
+                  {deal.stale_outcome && (
+                    <p className={deal.stale_outcome === "await_buyer" ? "text-danger" : "text-muted-foreground"}>
+                      {deal.stale_outcome === "complete"
+                        ? t.adminStaleWillComplete
+                        : deal.stale_outcome === "await_buyer"
+                          ? t.adminStaleAwaitBuyer
+                          : t.adminStaleWillCancel}
+                    </p>
+                  )}
                   <button
                     type="button"
                     disabled={dealActionId !== null}
