@@ -162,6 +162,9 @@ const th = {
   adminForceCancelDeal: 'ยกเลิกดีล (ผู้ดูแล)',
   adminReleaseStaleDeals: 'ปล่อยดีลค้างตามเวลา',
   adminStaleBadge: 'เกินกำหนด',
+  adminStaleWillComplete: 'ผู้ซื้อยืนยันแล้ว — จะปิดดีลเป็นขายแล้ว',
+  adminStaleAwaitBuyer: 'ผู้ขายยืนยัน แต่ผู้ซื้อยังไม่ยืนยัน — คงการจองไว้ ต้องตรวจสอบ',
+  adminStaleWillCancel: 'ไม่มีใครยืนยัน — จะยกเลิกและนำกลับมาขาย',
 };
 
 const en: typeof th = {
@@ -315,6 +318,9 @@ const en: typeof th = {
   adminForceCancelDeal: 'Force-cancel deal',
   adminReleaseStaleDeals: 'Release stale deals now',
   adminStaleBadge: 'Stale',
+  adminStaleWillComplete: 'Buyer confirmed — will complete as sold',
+  adminStaleAwaitBuyer: 'Seller confirmed, buyer has not — stays reserved, needs review',
+  adminStaleWillCancel: 'Nobody confirmed — will cancel and relist',
 };
 
 export const i18n: Record<AppLang, typeof th> = { th, en };

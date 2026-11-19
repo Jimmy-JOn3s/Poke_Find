@@ -54,5 +54,6 @@ class AdminExpireStaleDealsView(APIView):
     permission_classes = (IsStaffUser,)
 
     def post(self, request):
-        count = expire_stale_deals()
-        return Response({"released": count})
+        counts = expire_stale_deals()
+        # "released" is kept for older clients: it counts listings put back on sale.
+        return Response({**counts, "released": counts["cancelled"]})

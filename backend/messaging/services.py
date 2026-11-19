@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -7,6 +8,8 @@ from django.utils import timezone
 from marketplace.market_intel import listing_snapshot_fields, record_price_observation
 from marketplace.models import Listing
 from .models import Conversation, Deal, Offer, Review
+
+logger = logging.getLogger(__name__)
 
 
 # Concurrency rules for the deal flow:
@@ -141,15 +144,20 @@ def confirm_deal(deal: Deal, actor) -> Deal:
     after = Deal.objects.filter(pk=deal.pk).values("buyer_confirmed", "seller_confirmed").first()
     if after and after["buyer_confirmed"] ^ after["seller_confirmed"]:
         Deal.objects.filter(pk=deal.pk, first_confirmed_at__isnull=True).update(first_confirmed_at=timezone.now())
-    completed = Deal.objects.filter(
-        pk=deal.pk, status=Deal.Status.ACCEPTED, buyer_confirmed=True, seller_confirmed=True,
-    ).update(status=Deal.Status.COMPLETED, completed_at=timezone.now())
-    if completed and not _move_listing(conversation.listing_id, Listing.Status.RESERVED, Listing.Status.SOLD):
+    _complete_deal(deal.pk, conversation.listing_id, buyer_confirmed=True, seller_confirmed=True)
+    return Deal.objects.select_related("conversation").get(pk=deal.pk)
+
+
+def _complete_deal(deal_pk: int, listing_id: int, **confirmations) -> bool:
+    """Complete the open deal if its confirmation flags still equal `confirmations`, sell the listing, record the sale."""
+    if not Deal.objects.filter(pk=deal_pk, status=Deal.Status.ACCEPTED, **confirmations).update(
+        status=Deal.Status.COMPLETED, completed_at=timezone.now(),
+    ):
+        return False
+    if not _move_listing(listing_id, Listing.Status.RESERVED, Listing.Status.SOLD):
         raise ValidationError("The listing is not reserved for this deal")
-    finished = Deal.objects.select_related("conversation").get(pk=deal.pk)
-    if completed:
-        record_price_observation(finished)
-    return finished
+    record_price_observation(Deal.objects.get(pk=deal_pk))
+    return True
 
 
 def _release_listing_after_cancel(deal: Deal, conversation: Conversation) -> None:
@@ -195,14 +203,44 @@ def force_cancel_deal(deal: Deal) -> Deal:
 
 
 @transaction.atomic
-def expire_stale_deals() -> int:
-    from .stale_deals import stale_open_deals_queryset
+def _settle_stale_deal(deal_pk: int) -> str | None:
+    from .stale_deals import StaleOutcome, stale_outcome
 
-    count = 0
-    for deal in list(stale_open_deals_queryset()):
-        force_cancel_deal(deal)
-        count += 1
-    return count
+    listing_id = Deal.objects.filter(pk=deal_pk).values_list("conversation__listing_id", flat=True).first()
+    if listing_id is None:
+        return None
+    lock_listing(listing_id)
+    # Decide again under the lock: a confirmation may have landed since the deal was picked.
+    deal = Deal.objects.get(pk=deal_pk)
+    outcome = stale_outcome(deal)
+    if outcome == StaleOutcome.COMPLETE:
+        completed = _complete_deal(deal_pk, listing_id, buyer_confirmed=True, seller_confirmed=False)
+        return outcome if completed else None
+    if outcome == StaleOutcome.CANCEL:
+        _cancel_accepted_deal(deal, require_unconfirmed=True)
+    # AWAIT_BUYER changes nothing: the listing stays reserved until the buyer confirms or staff step in.
+    return outcome
+
+
+def expire_stale_deals() -> dict[str, int]:
+    """Settle every overdue open deal and report how many were completed, left waiting, or cancelled."""
+    from .stale_deals import StaleOutcome, stale_open_deals_queryset
+
+    counts = {StaleOutcome.COMPLETE: 0, StaleOutcome.AWAIT_BUYER: 0, StaleOutcome.CANCEL: 0}
+    for deal_pk in list(stale_open_deals_queryset().values_list("pk", flat=True)):
+        # One transaction per deal, so a deal with inconsistent data can't undo or block the rest.
+        try:
+            outcome = _settle_stale_deal(deal_pk)
+        except ValidationError:
+            logger.exception("Could not settle stale deal %s", deal_pk)
+            continue
+        if outcome:
+            counts[outcome] += 1
+    return {
+        "completed": counts[StaleOutcome.COMPLETE],
+        "awaiting_buyer": counts[StaleOutcome.AWAIT_BUYER],
+        "cancelled": counts[StaleOutcome.CANCEL],
+    }
 
 
 @transaction.atomic

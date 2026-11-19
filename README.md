@@ -126,12 +126,20 @@ revenue, and **average sale price**. Safe to re-run; it replaces prior
 .venv/bin/python backend/manage.py seed_market_intelligence
 ```
 
-Open accepted deals that never finish are auto-cancelled by `release_stale_deals`
-(defaults: **14 days** with no confirmations, **7 days** after only one party confirms).
-Run it on a schedule in production, e.g. daily:
+Open deals that never finish are settled by `release_stale_deals`:
+
+| Who confirmed | What happens |
+|---|---|
+| Both | Completes at once; the listing is marked sold |
+| Buyer only | After `STALE_DEAL_DAYS_PARTIAL` (default **7 days**): completes; listing sold |
+| Seller only | After `STALE_DEAL_DAYS_PARTIAL`: **stays reserved** and is flagged for staff review; never relisted automatically |
+| Nobody | After `STALE_DEAL_DAYS_OPEN` (default **14 days**): cancelled; listing back on sale |
+
+Nothing runs it automatically: schedule it in production, e.g. daily with cron:
 
 ```bash
-.venv/bin/python backend/manage.py release_stale_deals
+# m h dom mon dow
+15 3 * * * cd /srv/pokefind && .venv/bin/python backend/manage.py release_stale_deals
 ```
 
 Staff can also **force-cancel** a stuck deal or **release stale deals** from the admin
