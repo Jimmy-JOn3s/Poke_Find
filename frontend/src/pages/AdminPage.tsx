@@ -240,9 +240,14 @@ export default function AdminPage({ lang, currentUser, onBack, onOpenListing, on
     setExpiringDeals(true);
     setError("");
     try {
-      await api.adminExpireStaleDeals();
+      const result = await api.adminExpireStaleDeals();
       setOpenDeals(await api.adminOpenDeals());
       setOverview(await api.adminOverview());
+      if (result.failed > 0) {
+        setError(lang === "th"
+          ? `ไม่สามารถจัดการดีลที่ค้างได้ ${result.failed} รายการ กรุณาตรวจสอบบันทึกข้อผิดพลาด`
+          : `${result.failed} overdue deal(s) could not be settled. Check the error log.`);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not release stale deals");
     } finally {

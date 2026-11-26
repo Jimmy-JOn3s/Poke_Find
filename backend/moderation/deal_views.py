@@ -60,6 +60,7 @@ class AdminExpireStaleDealsView(APIView):
 
     def post(self, request):
         counts = expire_stale_deals()
-        logger.info("Staff %s ran stale-deal settlement: %s", request.user.pk, counts)
+        log = logger.error if counts["failed"] else logger.info
+        log("Staff %s ran stale-deal settlement: %s", request.user.pk, counts)
         # "released" is kept for older clients: it counts listings put back on sale.
         return Response({**counts, "released": counts["cancelled"]})

@@ -27,4 +27,11 @@ describe("ErrorBoundary", () => {
     expect(english).toContain("Reload");
     expect(rendered(true, null)).toContain("เกิดข้อผิดพลาด");
   });
+
+  it("still shows the reload screen when browser storage is blocked", () => {
+    vi.stubGlobal("localStorage", { getItem: () => { throw new DOMException("blocked", "SecurityError"); } });
+    const boundary = new ErrorBoundary({ children: <p>the app</p> });
+    boundary.state = { failed: true };
+    expect(renderToStaticMarkup(<>{boundary.render()}</>)).toContain("เกิดข้อผิดพลาด");
+  });
 });

@@ -4,7 +4,7 @@ from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.db import DatabaseError
 from django.test import override_settings
 from django.utils import timezone
@@ -68,6 +68,7 @@ class FailureHandlingTests(ApiTestCase):
             with self.assertLogs("messaging.services", level="INFO") as logs:
                 counts = expire_stale_deals()
         self.assertEqual(counts["cancelled"], 1)
+        self.assertEqual(counts["failed"], 1)
         healthy.refresh_from_db()
         broken.refresh_from_db()
         self.assertEqual(healthy.status, Deal.Status.CANCELLED)
@@ -83,3 +84,41 @@ class FailureHandlingTests(ApiTestCase):
         self.assertIn(f"Deal {deal.pk} opened", text)
         self.assertIn(f"Deal {deal.pk} confirmed by user={self.buyer.pk} (buyer_confirmed)", text)
         self.assertIn(f"Deal {deal.pk} completed", text)
+
+    def test_stale_command_and_admin_endpoint_do_not_report_success_when_deals_failed(self):
+        self.open_deal("005")
+        Deal.objects.update(created_at=timezone.now() - timedelta(days=30))
+        with mock.patch("messaging.services._settle_stale_deal", side_effect=DatabaseError("database is down")):
+            with self.assertLogs("messaging.services", level="ERROR"):
+                with self.assertRaisesMessage(CommandError, "1 deal(s) could not be settled"):
+                    call_command("release_stale_deals", stdout=mock.Mock())
+            staff = get_user_model().objects.create_user(
+                username="fail-staff", email="fail-staff@example.com", password=PASSWORD, is_staff=True,
+            )
+            self.client.force_authenticate(staff)
+            with self.assertLogs("moderation.deal_views", level="ERROR"):
+                response = self.client.post("/api/v1/admin/deals/expire-stale/", {}, format="json")
+        self.assertEqual(response.data["failed"], 1)
+        self.assertEqual(response.data["cancelled"], 0)
+
+    def test_backfill_keeps_going_past_a_deal_that_still_fails(self):
+        bad, good = self.open_deal("006"), self.open_deal("007")
+        with mock.patch("messaging.services.record_price_observation", side_effect=DatabaseError("down")):
+            with self.assertLogs("messaging.services", level="ERROR"):
+                for deal in (bad, good):
+                    confirm_deal(deal, self.buyer)
+                    confirm_deal(deal, self.seller)
+        from marketplace.management.commands import backfill_price_observations as command
+        record = command.record_price_observation
+
+        def still_broken(deal):
+            if deal.pk == bad.pk:
+                raise DatabaseError("bad data")
+            return record(deal)
+
+        with mock.patch.object(command, "record_price_observation", side_effect=still_broken):
+            with self.assertLogs(command.__name__, level="ERROR"):
+                with self.assertRaisesMessage(CommandError, "Recorded 1 missing price observation(s). 1 deal(s) still failed"):
+                    call_command("backfill_price_observations", stdout=mock.Mock())
+        self.assertTrue(PriceObservation.objects.filter(deal=good).exists())
+        self.assertFalse(PriceObservation.objects.filter(deal=bad).exists())
