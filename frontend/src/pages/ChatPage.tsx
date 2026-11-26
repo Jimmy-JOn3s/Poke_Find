@@ -150,7 +150,7 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     void loadThreads();
   }, [isAuthenticated]);
   useEffect(() => {
-    setMessages([]); setOffers([]); setHasEarlier(false); setBody(""); setOfferAmount("");
+    setMessages([]); setOffers([]); setHasEarlier(false); setLoadingEarlier(false); setBody(""); setOfferAmount("");
     setShowOfferModal(false); setShowReserveModal(false); setError("");
     if (!active) return;
     // Ignore stale responses if the user switches chats or leaves the page.
@@ -186,7 +186,8 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
     } finally {
-      setLoadingEarlier(false);
+      // Only for the chat that asked: after a switch, the new chat owns this flag.
+      if (activeIdRef.current === conversationId) setLoadingEarlier(false);
     }
   };
 
