@@ -70,11 +70,11 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const inbox = lang === "th" ? {
     search: "ค้นหาคนหรือการ์ด", all: "ทั้งหมด", buying: "กำลังซื้อ", selling: "กำลังขาย",
     back: "กลับไปกล่องข้อความ", select: "เลือกการสนทนา", hint: "พูดคุย ตกลงราคา และติดตามการซื้อขายของคุณ",
-    noMatch: "ไม่พบการสนทนา", start: "เริ่มพูดคุยจากหน้าประกาศการ์ด", you: "คุณ", first: "เริ่มการสนทนา", loading: "กำลังโหลด…",
+    noMatch: "ไม่พบการสนทนา", start: "เริ่มพูดคุยจากหน้าประกาศการ์ด", you: "คุณ", first: "เริ่มการสนทนา", loading: "กำลังโหลด…", earlier: "ดูข้อความก่อนหน้า",
   } : {
     search: "Search people or cards", all: "All", buying: "Buying", selling: "Selling",
     back: "Back to inbox", select: "Select a conversation", hint: "Chat, agree on a price, and keep your trades together.",
-    noMatch: "No matching conversations", start: "Start a conversation from a card listing.", you: "You", first: "Start the conversation", loading: "Loading…",
+    noMatch: "No matching conversations", start: "Start a conversation from a card listing.", you: "You", first: "Start the conversation", loading: "Loading…", earlier: "Load earlier messages",
   };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "buying" | "selling">("all");
@@ -83,8 +83,12 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
   const [threads, setThreads] = useState<ApiConversation[]>([]);
   const [activeId, setActiveId] = useState<number | null>(initialConversationId);
   const active = threads.find(thread => thread.id === activeId) ?? null;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [offers, setOffers] = useState<ApiOffer[]>([]);
+  const [hasEarlier, setHasEarlier] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [body, setBody] = useState("");
   const [offerAmount, setOfferAmount] = useState("");
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -146,16 +150,17 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
     void loadThreads();
   }, [isAuthenticated]);
   useEffect(() => {
-    setMessages([]); setOffers([]); setBody(""); setOfferAmount("");
+    setMessages([]); setOffers([]); setHasEarlier(false); setLoadingEarlier(false); setBody(""); setOfferAmount("");
     setShowOfferModal(false); setShowReserveModal(false); setError("");
     if (!active) return;
     // Ignore stale responses if the user switches chats or leaves the page.
     let ignore = false;
     setThreadLoading(true);
     Promise.all([api.messages(active.id), api.offers(active.id)])
-      .then(async ([nextMessages, nextOffers]) => {
+      .then(async ([page, nextOffers]) => {
         if (ignore) return;
-        setMessages(nextMessages); setOffers(nextOffers);
+        const nextMessages = page.results;
+        setMessages(nextMessages); setOffers(nextOffers); setHasEarlier(page.has_more);
         const latest = nextMessages.at(-1);
         if (latest) {
           const updated = await api.markConversationRead(active.id, latest.id);
@@ -166,6 +171,25 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
       .finally(() => { if (!ignore) setThreadLoading(false); });
     return () => { ignore = true; };
   }, [active?.id]);
+
+  const loadEarlier = async () => {
+    const oldest = messages[0];
+    if (!active || !oldest || loadingEarlier) return;
+    const conversationId = active.id;
+    setLoadingEarlier(true);
+    try {
+      const page = await api.messages(conversationId, oldest.id);
+      // Drop the result if the user switched chats while it was loading.
+      if (activeIdRef.current !== conversationId) return;
+      setMessages(items => [...page.results, ...items]);
+      setHasEarlier(page.has_more);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Request failed");
+    } finally {
+      // Only for the chat that asked: after a switch, the new chat owns this flag.
+      if (activeIdRef.current === conversationId) setLoadingEarlier(false);
+    }
+  };
 
   if (!isAuthenticated) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-6 pixel-bg">
@@ -321,6 +345,12 @@ export default function ChatPage({ initialConversationId, lang, currentUser, isA
           </div>
           <div className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-2 w-full ${(canReserve || canMakeOffer) ? "pb-24" : ""}`}>
             {threadLoading && <p role="status" className="text-xs text-muted-foreground">{inbox.loading}</p>}
+            {hasEarlier && (
+              <button type="button" disabled={loadingEarlier} onClick={() => void loadEarlier()}
+                className="block mx-auto px-3 py-1 text-xs chip-btn">
+                {loadingEarlier ? inbox.loading : inbox.earlier}
+              </button>
+            )}
             {messages.map(message => (
               <div key={message.id} className={`flex ${message.author.id === Number(currentUser?.id) ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] md:max-w-[65%] px-3 py-2 text-sm ${message.author.id === Number(currentUser?.id) ? "chat-bubble-out" : "chat-bubble-in"}`}>
