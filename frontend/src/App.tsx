@@ -164,6 +164,7 @@ export default function App() {
   ) => {
     setAuthLoading(true);
     setAuthError("");
+    setVerificationEmailFailed(false);  // a notice from an earlier sign-up must not carry over to this sign-in
     try {
       if (mode === "signup") {
         const usernameBase = email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-") || "trainer";
