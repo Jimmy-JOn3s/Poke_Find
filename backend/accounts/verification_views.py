@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -24,6 +26,9 @@ class VerificationSubmissionView(APIView):
         serializer = VerificationSubmissionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         submission = serializer.save()
+        logging.getLogger(__name__).info(
+            "User %s submitted identity verification %s", request.user.pk, submission.pk,
+        )
         return Response(
             VerificationSubmissionStatusSerializer(submission).data,
             status=status.HTTP_201_CREATED,

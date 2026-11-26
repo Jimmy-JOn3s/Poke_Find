@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Q
@@ -49,6 +51,7 @@ class ReportCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         report = serializer.save()
+        logging.getLogger(__name__).info("User %s filed report %s (%s)", request.user.pk, report.pk, report.reason)
         return Response(
             ContentReportSerializer(report).data,
             status=status.HTTP_201_CREATED,
@@ -165,6 +168,9 @@ class AdminReportActionView(APIView):
             elif mark_resolved and not report.admin_notes:
                 report.admin_notes = outcome["detail"][:2000]
             report.save(update_fields=["status", "admin_notes", "resolved_by", "resolved_at", "updated_at"])
+        logging.getLogger(__name__).info(
+            "Staff %s applied %s to report %s: %s", request.user.pk, action, pk, outcome["detail"],
+        )
 
         report = admin_report_queryset().get(pk=pk)
         return Response({
