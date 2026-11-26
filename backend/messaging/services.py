@@ -243,16 +243,22 @@ def _settle_stale_deal(deal_pk: int) -> str | None:
 
 
 def expire_stale_deals() -> dict[str, int]:
-    """Settle every overdue open deal and report how many were completed, left waiting, or cancelled."""
+    """Settle every overdue open deal and report how many were completed, left waiting, cancelled, or failed.
+
+    A deal that raises is logged and skipped so it can't block the rest, but it is counted in "failed":
+    callers must surface that number, otherwise an outage looks like "nothing was overdue".
+    """
     from .stale_deals import StaleOutcome, stale_open_deals_queryset
 
     counts = {StaleOutcome.COMPLETE: 0, StaleOutcome.AWAIT_BUYER: 0, StaleOutcome.CANCEL: 0}
+    failed = 0
     for deal_pk in list(stale_open_deals_queryset().values_list("pk", flat=True)):
         # One transaction per deal, so a deal with inconsistent data can't undo or block the rest.
         try:
             outcome = _settle_stale_deal(deal_pk)
         except Exception:  # not only ValidationError: a database error on one deal must not stop the batch
             logger.exception("Could not settle stale deal %s", deal_pk)
+            failed += 1
             continue
         if outcome:
             counts[outcome] += 1
@@ -261,6 +267,7 @@ def expire_stale_deals() -> dict[str, int]:
         "completed": counts[StaleOutcome.COMPLETE],
         "awaiting_buyer": counts[StaleOutcome.AWAIT_BUYER],
         "cancelled": counts[StaleOutcome.CANCEL],
+        "failed": failed,
     }
 
 

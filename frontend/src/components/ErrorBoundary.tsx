@@ -3,6 +3,15 @@ import { i18n } from "../i18n";
 
 interface State { failed: boolean }
 
+/** Reading storage can itself throw (blocked site data, some webviews), and that may be why the app crashed. */
+function storedLanguage(): "th" | "en" {
+  try {
+    return localStorage.getItem("pokefind.language") === "en" ? "en" : "th";
+  } catch {
+    return "th";
+  }
+}
+
 /** Catches a crash while rendering so the user gets a way back instead of a blank screen. */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { failed: false };
@@ -17,7 +26,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
   render() {
     if (!this.state.failed) return this.props.children;
-    const t = i18n[localStorage.getItem("pokefind.language") === "en" ? "en" : "th"];
+    const t = i18n[storedLanguage()];
     return (
       <div role="alert" className="flex flex-col items-center justify-center min-h-screen px-5 text-center bg-background">
         <p className="font-pixel text-[10px] mb-3 text-accent" style={{ letterSpacing: "0.15em" }}>POKEFIND</p>

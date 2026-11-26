@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from messaging.services import expire_stale_deals
 
@@ -11,7 +11,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         counts = expire_stale_deals()
-        self.stdout.write(self.style.SUCCESS(
+        summary = (
             f"Completed {counts['completed']}, cancelled {counts['cancelled']}; "
             f"{counts['awaiting_buyer']} still waiting on the buyer (left reserved for review)."
-        ))
+        )
+        if counts["failed"]:
+            # A non-zero exit lets cron or a scheduler alert on it; the details are in the error log.
+            raise CommandError(f"{summary} {counts['failed']} deal(s) could not be settled; see the error log.")
+        self.stdout.write(self.style.SUCCESS(summary))

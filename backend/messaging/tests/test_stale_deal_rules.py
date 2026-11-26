@@ -80,7 +80,7 @@ class StaleDealRuleTests(ApiTestCase):
     def test_buyer_only_is_left_alone_before_the_deadline(self):
         confirm_deal(self.deal, self.buyer)
         self.age(created_days=20, first_confirmed_days=6)
-        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0})
+        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0, "failed": 0})
         self.assertEqual(self.fresh_deal().status, Deal.Status.ACCEPTED)
         self.assertEqual(self.listing_status(), Listing.Status.RESERVED)
 
@@ -88,7 +88,7 @@ class StaleDealRuleTests(ApiTestCase):
         confirm_deal(self.deal, self.buyer)
         self.age(created_days=20, first_confirmed_days=8)
         self.assertEqual(stale_outcome(self.fresh_deal()), StaleOutcome.COMPLETE)
-        self.assertEqual(expire_stale_deals(), {"completed": 1, "awaiting_buyer": 0, "cancelled": 0})
+        self.assertEqual(expire_stale_deals(), {"completed": 1, "awaiting_buyer": 0, "cancelled": 0, "failed": 0})
         deal = self.fresh_deal()
         self.assertEqual(deal.status, Deal.Status.COMPLETED)
         self.assertIsNotNone(deal.completed_at)
@@ -112,7 +112,7 @@ class StaleDealRuleTests(ApiTestCase):
         confirm_deal(self.deal, self.seller)
         self.age(created_days=20, first_confirmed_days=8)
         self.assertEqual(stale_outcome(self.fresh_deal()), StaleOutcome.AWAIT_BUYER)
-        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 1, "cancelled": 0})
+        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 1, "cancelled": 0, "failed": 0})
         self.assertEqual(self.fresh_deal().status, Deal.Status.ACCEPTED)
         self.assertEqual(self.listing_status(), Listing.Status.RESERVED)
         # Running again changes nothing.
@@ -143,13 +143,13 @@ class StaleDealRuleTests(ApiTestCase):
 
     def test_unconfirmed_deal_is_left_alone_before_the_deadline(self):
         self.age(created_days=13)
-        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0})
+        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0, "failed": 0})
         self.assertEqual(self.listing_status(), Listing.Status.RESERVED)
 
     def test_unconfirmed_deal_is_cancelled_once_overdue_and_the_listing_goes_back_on_sale(self):
         self.age(created_days=15)
         self.assertEqual(stale_outcome(self.fresh_deal()), StaleOutcome.CANCEL)
-        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 1})
+        self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 1, "failed": 0})
         self.assertEqual(self.fresh_deal().status, Deal.Status.CANCELLED)
         self.assertEqual(self.listing_status(), Listing.Status.ACTIVE)
 
@@ -162,7 +162,7 @@ class StaleDealRuleTests(ApiTestCase):
         confirm_deal(self.deal, self.buyer)
         with mock.patch("messaging.stale_deals.stale_open_deals_queryset") as picked:
             picked.return_value.values_list.return_value = [deal.pk for deal in overdue]
-            self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0})
+            self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 0, "failed": 0})
         deal = self.fresh_deal()
         self.assertEqual(deal.status, Deal.Status.ACCEPTED)
         self.assertTrue(deal.buyer_confirmed)
@@ -187,7 +187,7 @@ class StaleDealRuleTests(ApiTestCase):
         Deal.objects.filter(pk=other.pk).update(created_at=timezone.now() - timedelta(days=15))
 
         with self.assertLogs("messaging.services", "ERROR"):
-            self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 1})
+            self.assertEqual(expire_stale_deals(), {"completed": 0, "awaiting_buyer": 0, "cancelled": 1, "failed": 1})
         self.assertEqual(self.fresh_deal().status, Deal.Status.ACCEPTED)
         self.assertEqual(Deal.objects.get(pk=other.pk).status, Deal.Status.CANCELLED)
 
@@ -197,4 +197,4 @@ class StaleDealRuleTests(ApiTestCase):
         self.auth(self.staff)
         response = self.client.post("/api/admin/deals/expire-stale/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"completed": 1, "awaiting_buyer": 0, "cancelled": 0, "released": 0})
+        self.assertEqual(response.data, {"completed": 1, "awaiting_buyer": 0, "cancelled": 0, "failed": 0, "released": 0})

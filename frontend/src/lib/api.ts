@@ -643,7 +643,7 @@ export const api = {
   adminForceCancelDeal(id: number): Promise<{ status: string; deal_id: number; listing_id: number }> {
     return request(`/admin/deals/${id}/force-cancel/`, { method: "POST", body: "{}" });
   },
-  adminExpireStaleDeals(): Promise<{ completed: number; awaiting_buyer: number; cancelled: number; released: number }> {
+  adminExpireStaleDeals(): Promise<{ completed: number; awaiting_buyer: number; cancelled: number; released: number; failed: number }> {
     return request("/admin/deals/expire-stale/", { method: "POST", body: "{}" });
   },
   async adminUsers(): Promise<AdminUserRow[]> {
