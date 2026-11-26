@@ -13,7 +13,7 @@ function storedLanguage(): "th" | "en" {
 }
 
 /** Catches a crash while rendering so the user gets a way back instead of a blank screen. */
-export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
+export default class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { failed: false };
 
   static getDerivedStateFromError(): State {

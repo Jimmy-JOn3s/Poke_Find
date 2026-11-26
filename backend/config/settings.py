@@ -192,6 +192,8 @@ if os.getenv("REDIS_URL"):
     # Share rate-limit counters across worker processes.
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": os.environ["REDIS_URL"]}}
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
+# The web app runs on another origin; without this the browser hides the header from it.
+CORS_EXPOSE_HEADERS = ["X-Request-ID"]
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
 MARKET_PRICE_MIN_SALES = int(os.getenv("MARKET_PRICE_MIN_SALES", "20"))
 # Open accepted deals with no confirmations are auto-cancelled after this many days (see release_stale_deals).
@@ -216,7 +218,8 @@ if not DEBUG:
 #   error  - warnings and errors from anywhere, with stack traces
 # With DJANGO_LOG_TO_FILES=1 they go to access.log / app.log / error.log in DJANGO_LOG_DIR, rotated at
 # midnight. Otherwise everything goes to stderr, which is what container hosts collect.
-RUNNING_TESTS = sys.argv[1:2] == ["test"]
+# manage.py test, pytest, or any other runner that sets DJANGO_TESTING=1: none of them may write to the real log files.
+RUNNING_TESTS = sys.argv[1:2] == ["test"] or "pytest" in sys.modules or os.getenv("DJANGO_TESTING") == "1"
 LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
 LOG_TO_FILES = os.getenv("DJANGO_LOG_TO_FILES", "1" if DEBUG else "0") == "1" and not RUNNING_TESTS
 LOG_DIR = Path(os.getenv("DJANGO_LOG_DIR", BASE_DIR / "logs"))
