@@ -507,6 +507,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+const THREAD_PAGE_SIZE = 50;
+
 export const api = {
   async listListings(filters: ListingFilters = {}): Promise<Listing[]> {
     const result = await request<{ results: ApiListing[] }>(`/listings/${buildListingQuery(filters)}`);
@@ -587,11 +589,18 @@ export const api = {
   startConversation(listingId: string): Promise<ApiConversation> {
     return request("/conversations/", { method: "POST", body: JSON.stringify({ listing_id: listingId }) });
   },
-  messages(id: number): Promise<ApiMessage[]> { return request(`/conversations/${id}/messages/`); },
+  /** The newest page of a chat, oldest message first. Pass `before` (a message id) for the page before it. */
+  messages(id: number, before?: number): Promise<{ results: ApiMessage[]; has_more: boolean }> {
+    return request(`/conversations/${id}/messages/?limit=${THREAD_PAGE_SIZE}${before ? `&before=${before}` : ""}`);
+  },
   markConversationRead(id: number, messageId: number): Promise<ApiConversation> {
     return request(`/conversations/${id}/read/`, { method: "POST", body: JSON.stringify({ message_id: messageId }) });
   },
-  offers(id: number): Promise<ApiOffer[]> { return request(`/conversations/${id}/offers/`); },
+  /** The newest offers of a chat, newest first. Older ones are settled and not shown. */
+  async offers(id: number): Promise<ApiOffer[]> {
+    const page = await request<{ results: ApiOffer[] }>(`/conversations/${id}/offers/?limit=${THREAD_PAGE_SIZE}`);
+    return page.results;
+  },
   sendMessage(id: number, body: string): Promise<ApiMessage> {
     return request(`/conversations/${id}/messages/`, { method: "POST", body: JSON.stringify({ body }) });
   },
