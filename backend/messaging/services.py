@@ -12,6 +12,11 @@ from .models import Conversation, Deal, Offer, Review
 logger = logging.getLogger(__name__)
 
 
+def _log_event(message: str, *args) -> None:
+    """Log a deal event once the transaction commits, so the log never records something that was rolled back."""
+    transaction.on_commit(lambda: logger.info(message, *args))
+
+
 # Concurrency rules for the deal flow:
 # 1. Every write locks the listing row first (lock_listing). One lock order everywhere means requests
 #    on the same listing run one at a time on PostgreSQL and can never deadlock each other.
@@ -53,7 +58,7 @@ def _open_deal_for_listing(listing: Listing, conversation: Conversation, offer: 
         currency=offer.currency,
         **listing_snapshot_fields(listing),
     )
-    logger.info(
+    _log_event(
         "Deal %s opened: listing=%s buyer=%s seller=%s price=%s %s",
         deal.pk, listing.pk, conversation.buyer_id, conversation.seller_id, deal.final_price, deal.currency,
     )
@@ -148,7 +153,7 @@ def confirm_deal(deal: Deal, actor) -> Deal:
     after = Deal.objects.filter(pk=deal.pk).values("buyer_confirmed", "seller_confirmed").first()
     if after and after["buyer_confirmed"] ^ after["seller_confirmed"]:
         Deal.objects.filter(pk=deal.pk, first_confirmed_at__isnull=True).update(first_confirmed_at=timezone.now())
-    logger.info("Deal %s confirmed by user=%s (%s)", deal.pk, actor.id, flag)
+    _log_event("Deal %s confirmed by user=%s (%s)", deal.pk, actor.id, flag)
     _complete_deal(deal.pk, conversation.listing_id, buyer_confirmed=True, seller_confirmed=True)
     return Deal.objects.select_related("conversation").get(pk=deal.pk)
 
@@ -161,7 +166,7 @@ def _complete_deal(deal_pk: int, listing_id: int, **confirmations) -> bool:
         return False
     if not _move_listing(listing_id, Listing.Status.RESERVED, Listing.Status.SOLD):
         raise ValidationError("The listing is not reserved for this deal")
-    logger.info("Deal %s completed: listing=%s sold", deal_pk, listing_id)
+    _log_event("Deal %s completed: listing=%s sold", deal_pk, listing_id)
     _record_sale(deal_pk)
     return True
 
@@ -205,7 +210,7 @@ def _cancel_accepted_deal(deal: Deal, *, require_unconfirmed: bool) -> Deal:
             raise ValidationError("Only an open deal that nobody has confirmed yet can be cancelled")
         raise ValidationError("This deal is no longer open")
     _release_listing_after_cancel(deal, conversation)
-    logger.info("Deal %s cancelled: listing=%s forced=%s", deal.pk, conversation.listing_id, not require_unconfirmed)
+    _log_event("Deal %s cancelled: listing=%s forced=%s", deal.pk, conversation.listing_id, not require_unconfirmed)
     return Deal.objects.select_related("conversation").get(pk=deal.pk)
 
 

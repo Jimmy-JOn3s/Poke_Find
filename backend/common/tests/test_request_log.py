@@ -1,6 +1,7 @@
 import logging
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import path
@@ -62,6 +63,10 @@ class AccessLogTests(ApiTestCase):
         self.assertEqual(kept["X-Request-ID"], "trace-12345678")
         replaced = self.client.get("/api/v1/health/", HTTP_X_REQUEST_ID="bad id\twith spaces")
         self.assertRegex(replaced["X-Request-ID"], r"^[0-9a-f]{16}$")
+
+    def test_request_id_header_is_readable_by_the_web_app_on_another_origin(self):
+        response = self.client.get("/api/v1/health/", HTTP_ORIGIN=settings.CORS_ALLOWED_ORIGINS[0])
+        self.assertIn("X-Request-ID", response["Access-Control-Expose-Headers"])
 
     def test_log_records_carry_the_request_id_only_during_the_request(self):
         record = logging.LogRecord("x", logging.INFO, __file__, 1, "m", None, None)

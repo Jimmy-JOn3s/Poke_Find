@@ -76,7 +76,7 @@ class FailureHandlingTests(ApiTestCase):
         self.assertTrue(any(f"Could not settle stale deal {broken.pk}" in line for line in logs.output))
 
     def test_deal_lifecycle_is_logged(self):
-        with self.assertLogs("messaging.services", level="INFO") as logs:
+        with self.assertLogs("messaging.services", level="INFO") as logs, self.captureOnCommitCallbacks(execute=True):
             deal = self.open_deal("004")
             confirm_deal(deal, self.buyer)
             confirm_deal(deal, self.seller)
@@ -122,3 +122,12 @@ class FailureHandlingTests(ApiTestCase):
                     call_command("backfill_price_observations", stdout=mock.Mock())
         self.assertTrue(PriceObservation.objects.filter(deal=good).exists())
         self.assertFalse(PriceObservation.objects.filter(deal=bad).exists())
+
+    def test_a_rolled_back_deal_is_not_logged_as_opened(self):
+        from django.db import transaction
+
+        with self.assertNoLogs("messaging.services", level="INFO"), self.captureOnCommitCallbacks(execute=True):
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                self.open_deal("008")
+                raise DatabaseError("later step failed")
+        self.assertFalse(Deal.objects.exists())

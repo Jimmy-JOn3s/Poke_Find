@@ -56,5 +56,6 @@ def send_transactional_email(*, to: list[str], subject: str, body: str) -> None:
             return
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL or None, to, fail_silently=False)
     except Exception as exc:
-        logger.exception("Transactional email failed for recipients %s", to)
+        # Never the addresses: logs are kept for days and read by more people than the user table.
+        logger.exception("Transactional email failed (%d recipient(s), subject %r)", len(to), subject)
         raise EmailDeliveryError(_delivery_failure_detail(exc)) from exc
