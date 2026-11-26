@@ -171,6 +171,7 @@ export default function App() {
         });
         setTokens({ access: result.access, refresh: result.refresh });
         setCurrentUser(mapUser(result.user));
+        if (result.verification_email_sent === false) setActionError(i18n[lang].verificationEmailNotSent);
       } else {
         const result = await api.login(email, password);
         setTokens(result);

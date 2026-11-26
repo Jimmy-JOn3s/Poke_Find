@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api, resolveApiBase, setTokens } from "./api";
+import { api, resolveApiBase, resolveMediaUrl, setTokens } from "./api";
 
 const API = "http://api.test/api";
 const ME = { id: 1, display_name: "Ash", role: "personal", is_email_verified: false, is_verified_seller: false };
@@ -29,6 +29,14 @@ describe("API base URL", () => {
     expect(() => resolveApiBase(undefined)).toThrow(/VITE_API_URL/);
     expect(() => resolveApiBase("  ")).toThrow(/VITE_API_URL/);
     expect(resolveApiBase("https://api.example.com/api/")).toBe("https://api.example.com/api");
+  });
+
+  it("resolves media against the site origin for versioned and unversioned bases", () => {
+    for (const base of ["https://api.example.com/api/v1", "https://api.example.com/api/v1/", "https://api.example.com/api"]) {
+      vi.stubEnv("VITE_API_URL", base);
+      expect(resolveMediaUrl("/media/a.png")).toBe("https://api.example.com/media/a.png");
+    }
+    vi.unstubAllEnvs();
   });
 });
 

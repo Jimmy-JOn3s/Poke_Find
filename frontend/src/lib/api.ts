@@ -38,7 +38,7 @@ function apiBase(): string {
 }
 
 export function apiOrigin(): string {
-  return apiBase().replace(/\/api\/?$/, "");
+  return apiBase().replace(/\/api(\/v\d+)?\/?$/, "");
 }
 
 export function resolveMediaUrl(path: string): string {
@@ -268,6 +268,8 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: ApiUser;
+  /** Registration only: false when the account was created but the verification email failed to send. */
+  verification_email_sent?: boolean;
 }
 
 export interface ApiMessage { id: number; author: ApiUser; body: string; created_at: string }

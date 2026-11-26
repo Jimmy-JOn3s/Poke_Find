@@ -1,6 +1,9 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -26,6 +29,7 @@ from .password_reset import confirm_password_reset, request_password_reset
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class AuthAttemptThrottleMixin:
@@ -37,6 +41,14 @@ class AuthAttemptThrottleMixin:
 
 class LoginView(AuthAttemptThrottleMixin, TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except AuthenticationFailed:
+            # No identifier is logged: the access-log line with the same request ID has the IP.
+            logger.warning("Login failed")
+            raise
 
 
 class LogoutView(TokenBlacklistView):
@@ -51,14 +63,19 @@ class RegisterView(AuthAttemptThrottleMixin, generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        # The account exists either way; the flag lets the app say the email didn't go out and offer a resend.
+        verification_email_sent = True
         try:
             request_email_verification(user)
         except EmailDeliveryError:
-            pass
+            verification_email_sent = False
+            logger.warning("User %s registered but the verification email could not be sent", user.pk)
+        logger.info("User %s registered (role=%s)", user.pk, user.role)
         refresh = RefreshToken.for_user(user)
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),
+            "verification_email_sent": verification_email_sent,
             "user": UserSerializer(user, context={"request": request}).data,
         }, status=status.HTTP_201_CREATED)
 
@@ -123,6 +140,7 @@ class PasswordResetConfirmView(AuthAttemptThrottleMixin, APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         confirm_password_reset(**serializer.validated_data)
+        logger.info("Password reset completed")
         return Response({"detail": "Password updated. Sign in with your new password."})
 
 
@@ -150,6 +168,7 @@ class MagicLinkConfirmView(AuthAttemptThrottleMixin, APIView):
         serializer = MagicLinkConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         access, refresh, user = confirm_magic_link(**serializer.validated_data)
+        logger.info("User %s signed in with a magic link", user.pk)
         return Response({
             "access": access,
             "refresh": refresh,
@@ -178,6 +197,7 @@ class EmailVerificationConfirmView(AuthAttemptThrottleMixin, APIView):
         serializer = EmailVerificationConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = confirm_email_verification(**serializer.validated_data)
+        logger.info("User %s verified their email", user.pk)
         return Response({
             "detail": "Email verified.",
             "user": UserSerializer(user, context={"request": request}).data,
