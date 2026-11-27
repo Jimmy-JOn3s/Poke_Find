@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -44,6 +45,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # First, so the request ID and access-log line cover everything below, including redirects and CORS.
+    "common.request_log.RequestLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -152,6 +155,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 24,
+    # The version comes from the URL (/api/v1/...). Unversioned /api/... requests get DEFAULT_VERSION.
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ("v1",),
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
@@ -167,6 +174,7 @@ REST_FRAMEWORK = {
     # Number of proxies in front of Django that append to X-Forwarded-For. DRF's default (None)
     # would trust whatever X-Forwarded-For the client sends, letting attackers dodge rate limits.
     "NUM_PROXIES": int(os.getenv("DJANGO_NUM_PROXIES", "0")),
+    "EXCEPTION_HANDLER": "common.request_log.api_exception_handler",
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "15"))),
@@ -184,7 +192,10 @@ if os.getenv("REDIS_URL"):
     # Share rate-limit counters across worker processes.
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": os.environ["REDIS_URL"]}}
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
+# The web app runs on another origin; without this the browser hides the header from it.
+CORS_EXPOSE_HEADERS = ["X-Request-ID"]
 USD_TO_THB_RATE = os.getenv("USD_TO_THB_RATE", "35.00")
+MARKET_PRICE_MIN_SALES = int(os.getenv("MARKET_PRICE_MIN_SALES", "20"))
 # Open accepted deals with no confirmations are auto-cancelled after this many days (see release_stale_deals).
 STALE_DEAL_DAYS_OPEN = int(os.getenv("STALE_DEAL_DAYS_OPEN", "14"))
 # Accepted deals with only one party confirmed are auto-cancelled after this many days from first confirm.
@@ -200,3 +211,69 @@ if not DEBUG:
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # HSTS for subdomains and preload-list submission are one-way commitments; decide them with the real domain.
     SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
+
+# Logging. Three streams, each line stamped with the request ID:
+#   access - one line per request (common.request_log.RequestLogMiddleware)
+#   app    - business and security events from our own apps, at DJANGO_LOG_LEVEL
+#   error  - warnings and errors from anywhere, with stack traces
+# With DJANGO_LOG_TO_FILES=1 they go to access.log / app.log / error.log in DJANGO_LOG_DIR, rotated at
+# midnight. Otherwise everything goes to stderr, which is what container hosts collect.
+# manage.py test, pytest, or any other runner that sets DJANGO_TESTING=1: none of them may write to the real log files.
+RUNNING_TESTS = sys.argv[1:2] == ["test"] or "pytest" in sys.modules or os.getenv("DJANGO_TESTING") == "1"
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
+LOG_TO_FILES = os.getenv("DJANGO_LOG_TO_FILES", "1" if DEBUG else "0") == "1" and not RUNNING_TESTS
+LOG_DIR = Path(os.getenv("DJANGO_LOG_DIR", BASE_DIR / "logs"))
+LOG_RETENTION_DAYS = int(os.getenv("DJANGO_LOG_RETENTION_DAYS", "14"))
+APP_LOGGERS = ("accounts", "common", "marketplace", "messaging", "moderation")
+
+
+def _log_file(name: str, level: str = "DEBUG") -> dict:
+    return {
+        "class": "logging.handlers.TimedRotatingFileHandler",
+        "filename": str(LOG_DIR / name),
+        "when": "midnight",
+        "backupCount": LOG_RETENTION_DAYS,
+        "encoding": "utf-8",
+        "delay": True,
+        "level": level,
+        "formatter": "standard",
+        "filters": ["request_id"],
+    }
+
+
+_console = {"class": "logging.StreamHandler", "formatter": "standard", "filters": ["request_id"]}
+if RUNNING_TESTS:
+    # Keep test output readable: no access or event lines, only real problems.
+    _handlers = {"console": {**_console, "level": "ERROR"}, "access": {"class": "logging.NullHandler"}}
+    _app_handlers: list[str] = []
+elif LOG_TO_FILES:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _handlers = {
+        "console": {**_console, "level": "INFO" if DEBUG else "WARNING"},
+        "access": _log_file("access.log"),
+        "app": _log_file("app.log"),
+        "error": _log_file("error.log", "WARNING"),
+    }
+    _app_handlers = ["app"]
+else:
+    _handlers = {"console": _console, "access": _console}
+    _app_handlers = []
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {"request_id": {"()": "common.request_context.RequestIdFilter"}},
+    "formatters": {"standard": {"format": "%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s"}},
+    "handlers": _handlers,
+    "root": {"level": "WARNING", "handlers": ["console", *(["error"] if "error" in _handlers else [])]},
+    "loggers": {
+        "pokefind.access": {"level": "INFO", "handlers": ["access"], "propagate": False},
+        # Our apps log at DJANGO_LOG_LEVEL; warnings and errors also reach the root handlers above.
+        **{name: {"level": LOG_LEVEL, "handlers": _app_handlers} for name in APP_LOGGERS},
+        # Django's own records go through the root handlers only (its default adds a second console handler).
+        "django": {"level": "INFO", "handlers": [], "propagate": True},
+        # Django logs every 4xx here as a warning; the access log already has those. Keep only 5xx.
+        "django.request": {"level": "ERROR"},
+        "django.server": {"level": "INFO", "handlers": ["console"], "propagate": False},
+    },
+}

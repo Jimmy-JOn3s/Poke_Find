@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db.models import Case, Count, F, OuterRef, Q, Subquery, When
 from rest_framework import serializers
 
 from accounts.serializers import PublicUserSerializer
@@ -81,7 +82,9 @@ class DealSerializer(serializers.ModelSerializer):
         user = self._request_user()
         if not user or not user.is_authenticated:
             return False
-        return obj.reviews.filter(reviewer_id=user.id).exists()
+        # all() reads the prefetched reviews when the view loaded them (a deal has at most two),
+        # where filter() would query once per deal in a list.
+        return any(review.reviewer_id == user.id for review in obj.reviews.all())
 
     def get_counterparty_id(self, obj):
         user = self._request_user()
@@ -106,6 +109,15 @@ class DealSerializer(serializers.ModelSerializer):
         return None
 
 
+class ConversationListSerializer(serializers.ListSerializer):
+    """Loads the latest message and unread count for the whole page in two queries, not two per row."""
+
+    def to_representation(self, data):
+        conversations = list(data)
+        self.child.preload(conversations)
+        return super().to_representation(conversations)
+
+
 class ConversationSerializer(serializers.ModelSerializer):
     buyer = PublicUserSerializer(read_only=True)
     seller = PublicUserSerializer(read_only=True)
@@ -119,6 +131,28 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = ("id", "listing_id", "listing", "buyer", "seller", "latest_message", "unread_count", "deal", "created_at", "updated_at")
         read_only_fields = ("id", "buyer", "seller", "created_at", "updated_at")
+        list_serializer_class = ConversationListSerializer
+
+    def preload(self, conversations):
+        """Called for a list. Single conversations skip this and fall back to per-object queries."""
+        user = self.context["request"].user
+        ids = [conversation.pk for conversation in conversations]
+        newest = Message.objects.filter(conversation=OuterRef("pk")).order_by("-created_at", "-pk").values("pk")[:1]
+        newest_ids = Conversation.objects.filter(pk__in=ids).annotate(newest_id=Subquery(newest)).values("newest_id")
+        self._latest_messages = {
+            message.conversation_id: message
+            for message in Message.objects.filter(pk__in=newest_ids).select_related("author")
+        }
+        read_at = Case(
+            When(conversation__buyer=user, then=F("conversation__buyer_read_at")),
+            default=F("conversation__seller_read_at"),
+        )
+        unread = (
+            Message.objects.filter(conversation__in=ids).exclude(author=user).annotate(read_at=read_at)
+            .filter(Q(read_at__isnull=True) | Q(created_at__gt=F("read_at")))
+            .values("conversation_id").annotate(total=Count("pk"))
+        )
+        self._unread_counts = {row["conversation_id"]: row["total"] for row in unread}
 
     def get_deal(self, obj):
         deal = obj.live_deal()
@@ -134,6 +168,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         }
 
     def get_unread_count(self, obj):
+        if hasattr(self, "_unread_counts"):
+            return self._unread_counts.get(obj.pk, 0)
         user = self.context["request"].user
         read_at = obj.buyer_read_at if user.id == obj.buyer_id else obj.seller_read_at
         messages = obj.messages.exclude(author=user)
@@ -142,7 +178,10 @@ class ConversationSerializer(serializers.ModelSerializer):
         return messages.count()
 
     def get_latest_message(self, obj):
-        message = obj.messages.last()
+        if hasattr(self, "_latest_messages"):
+            message = self._latest_messages.get(obj.pk)
+        else:
+            message = obj.messages.order_by("-created_at", "-pk").first()
         return MessageSerializer(message).data if message else None
 
     def create(self, validated_data):

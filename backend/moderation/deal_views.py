@@ -1,3 +1,5 @@
+import logging
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from rest_framework import generics, status
@@ -10,6 +12,8 @@ from messaging.services import expire_stale_deals, force_cancel_deal
 
 from .deal_serializers import AdminOpenDealSerializer
 from .permissions import IsStaffUser
+
+logger = logging.getLogger(__name__)
 
 
 class AdminOpenDealListView(generics.ListAPIView):
@@ -44,6 +48,7 @@ class AdminForceCancelDealView(APIView):
             cancelled = force_cancel_deal(deal)
         except DjangoValidationError as exc:
             raise ValidationError(exc.messages) from exc
+        logger.info("Staff %s force-cancelled deal %s", request.user.pk, cancelled.pk)
         deal = Deal.objects.select_related(
             "conversation", "conversation__listing", "conversation__buyer", "conversation__seller",
         ).get(pk=cancelled.pk)
@@ -54,5 +59,8 @@ class AdminExpireStaleDealsView(APIView):
     permission_classes = (IsStaffUser,)
 
     def post(self, request):
-        count = expire_stale_deals()
-        return Response({"released": count})
+        counts = expire_stale_deals()
+        log = logger.error if counts["failed"] else logger.info
+        log("Staff %s ran stale-deal settlement: %s", request.user.pk, counts)
+        # "released" is kept for older clients: it counts listings put back on sale.
+        return Response({**counts, "released": counts["cancelled"]})

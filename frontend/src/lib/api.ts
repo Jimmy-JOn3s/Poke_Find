@@ -38,7 +38,7 @@ function apiBase(): string {
 }
 
 export function apiOrigin(): string {
-  return apiBase().replace(/\/api\/?$/, "");
+  return apiBase().replace(/\/api(\/v\d+)?\/?$/, "");
 }
 
 export function resolveMediaUrl(path: string): string {
@@ -188,6 +188,8 @@ export interface AdminOpenDeal {
   buyer_name: string;
   seller_name: string;
   is_stale: boolean;
+  /** What release_stale_deals will do with this deal; null while it is not overdue. */
+  stale_outcome: "complete" | "await_buyer" | "cancel" | null;
 }
 
 export interface AdminMarketIntelligence {
@@ -266,6 +268,8 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: ApiUser;
+  /** Registration only: false when the account was created but the verification email failed to send. */
+  verification_email_sent?: boolean;
 }
 
 export interface ApiMessage { id: number; author: ApiUser; body: string; created_at: string }
@@ -503,6 +507,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+const THREAD_PAGE_SIZE = 50;
+
 export const api = {
   async listListings(filters: ListingFilters = {}): Promise<Listing[]> {
     const result = await request<{ results: ApiListing[] }>(`/listings/${buildListingQuery(filters)}`);
@@ -583,11 +589,18 @@ export const api = {
   startConversation(listingId: string): Promise<ApiConversation> {
     return request("/conversations/", { method: "POST", body: JSON.stringify({ listing_id: listingId }) });
   },
-  messages(id: number): Promise<ApiMessage[]> { return request(`/conversations/${id}/messages/`); },
+  /** The newest page of a chat, oldest message first. Pass `before` (a message id) for the page before it. */
+  messages(id: number, before?: number): Promise<{ results: ApiMessage[]; has_more: boolean }> {
+    return request(`/conversations/${id}/messages/?limit=${THREAD_PAGE_SIZE}${before ? `&before=${before}` : ""}`);
+  },
   markConversationRead(id: number, messageId: number): Promise<ApiConversation> {
     return request(`/conversations/${id}/read/`, { method: "POST", body: JSON.stringify({ message_id: messageId }) });
   },
-  offers(id: number): Promise<ApiOffer[]> { return request(`/conversations/${id}/offers/`); },
+  /** The newest offers of a chat, newest first. Older ones are settled and not shown. */
+  async offers(id: number): Promise<ApiOffer[]> {
+    const page = await request<{ results: ApiOffer[] }>(`/conversations/${id}/offers/?limit=${THREAD_PAGE_SIZE}`);
+    return page.results;
+  },
   sendMessage(id: number, body: string): Promise<ApiMessage> {
     return request(`/conversations/${id}/messages/`, { method: "POST", body: JSON.stringify({ body }) });
   },
@@ -639,7 +652,7 @@ export const api = {
   adminForceCancelDeal(id: number): Promise<{ status: string; deal_id: number; listing_id: number }> {
     return request(`/admin/deals/${id}/force-cancel/`, { method: "POST", body: "{}" });
   },
-  adminExpireStaleDeals(): Promise<{ released: number }> {
+  adminExpireStaleDeals(): Promise<{ completed: number; awaiting_buyer: number; cancelled: number; released: number; failed: number }> {
     return request("/admin/deals/expire-stale/", { method: "POST", body: "{}" });
   },
   async adminUsers(): Promise<AdminUserRow[]> {

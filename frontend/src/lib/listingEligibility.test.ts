@@ -36,7 +36,8 @@ describe("canCreateListing", () => {
   });
 
   it("allows verified personal sellers", () => {
-    expect(canCreateListing({ ...base, verified: true, verificationTier: "id" })).toBe(true);
+    const idVerified: User = { ...base, verified: true, verificationTier: "id" };
+    expect(canCreateListing(idVerified)).toBe(true);
   });
 
   it("allows business sellers with verified email only", () => {

@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from marketplace.market_intel import listing_snapshot_fields, record_price_observation
 from marketplace.models import Listing, SavedListing
 from messaging.models import Conversation, Deal, Message, Offer, Review
 
@@ -452,15 +453,14 @@ class Command(BaseCommand):
         if offer.status != Offer.Status.ACCEPTED:
             offer.status = Offer.Status.ACCEPTED
             offer.save(update_fields=("status", "updated_at"))
+        snapshot = listing_snapshot_fields(listing)
         deal, _ = Deal.objects.update_or_create(
             conversation=conversation,
             defaults={
                 "accepted_offer": offer,
                 "final_price": final_price,
                 "currency": currency,
-                "card_name": listing.product_name,
-                "card_set": listing.set_name,
-                "condition": listing.condition,
+                **snapshot,
                 "status": Deal.Status.COMPLETED,
                 "buyer_confirmed": True,
                 "seller_confirmed": True,
@@ -472,7 +472,11 @@ class Command(BaseCommand):
             deal.buyer_confirmed = True
             deal.seller_confirmed = True
             deal.completed_at = timezone.now()
-            deal.save(update_fields=("status", "buyer_confirmed", "seller_confirmed", "completed_at"))
+            deal.save(update_fields=(
+                "status", "buyer_confirmed", "seller_confirmed", "completed_at",
+                *snapshot.keys(),
+            ))
+        record_price_observation(deal)
         return deal
 
     def _seed_review(self, deal, reviewer, reviewee, rating, comment):

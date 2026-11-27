@@ -57,6 +57,7 @@ class StaleDealTests(ApiTestCase):
         confirm_deal(deal, self.buyer)
         self.listing.refresh_from_db()
         self.assertEqual(self.listing.status, Listing.Status.RESERVED)
+        self.auth(self.buyer)
         self.assertEqual(self.client.post(f"/api/deals/{deal.id}/cancel/").status_code, 400)
         force_cancel_deal(deal)
         self.listing.refresh_from_db()
@@ -70,9 +71,9 @@ class StaleDealTests(ApiTestCase):
         confirm_deal(deal, self.buyer)
         Deal.objects.filter(pk=deal.pk).update(first_confirmed_at=timezone.now() - timedelta(days=4))
         self.assertTrue(is_deal_stale(Deal.objects.get(pk=deal.pk)))
-        self.assertEqual(expire_stale_deals(), 1)
+        self.assertEqual(expire_stale_deals(), {"completed": 1, "awaiting_buyer": 0, "cancelled": 0, "failed": 0})
         self.listing.refresh_from_db()
-        self.assertEqual(self.listing.status, Listing.Status.ACTIVE)
+        self.assertEqual(self.listing.status, Listing.Status.SOLD)
 
     @override_settings(STALE_DEAL_DAYS_OPEN=10)
     def test_admin_force_cancel_endpoint(self):

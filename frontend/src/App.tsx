@@ -54,6 +54,8 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [actionError, setActionError] = useState("");
+  // A notice, not an action error: it has its own state so listing actions and sign-out can't leave it behind.
+  const [verificationEmailFailed, setVerificationEmailFailed] = useState(false);
   const [savedListingsBump, setSavedListingsBump] = useState(0);
   const { listings, loading, error, reload, create, remove, setListings } = useListings();
 
@@ -162,6 +164,7 @@ export default function App() {
   ) => {
     setAuthLoading(true);
     setAuthError("");
+    setVerificationEmailFailed(false);  // a notice from an earlier sign-up must not carry over to this sign-in
     try {
       if (mode === "signup") {
         const usernameBase = email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-") || "trainer";
@@ -171,6 +174,7 @@ export default function App() {
         });
         setTokens({ access: result.access, refresh: result.refresh });
         setCurrentUser(mapUser(result.user));
+        setVerificationEmailFailed(result.verification_email_sent === false);
       } else {
         const result = await api.login(email, password);
         setTokens(result);
@@ -189,6 +193,8 @@ export default function App() {
   const handleSignOut = () => {
     void api.logout();
     setCurrentUser(null);
+    setVerificationEmailFailed(false);
+    setActionError("");
     setCurrentPage("discover");
     void reload();
   };
@@ -354,6 +360,9 @@ export default function App() {
   return (
     <div className="relative flex flex-col md:flex-row bg-background min-h-dvh h-dvh w-full overflow-hidden">
       {actionError && <button onClick={() => setActionError("")} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{actionError} · ✕</button>}
+      {!actionError && verificationEmailFailed && isAuthenticated && !currentUser?.emailVerified && (
+        <button onClick={() => setVerificationEmailFailed(false)} className="absolute top-2 left-3 right-3 md:left-auto md:right-4 md:max-w-md z-[80] p-2 text-xs btn-danger-outline">{i18n[lang].verificationEmailNotSent} · ✕</button>
+      )}
       {showNav && <Navigation current={currentPage} onNav={handleNav} isAuthenticated={isAuthenticated} lang={lang} unreadChats={0} />}
       <main className={`flex-1 overflow-hidden flex flex-col min-w-0 ${showNav ? "bottom-safe md:bottom-0 md:pl-56" : ""}`}>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col h-full">{renderPage()}</div>

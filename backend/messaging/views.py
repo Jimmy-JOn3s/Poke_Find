@@ -23,6 +23,32 @@ def call_service(func, *args):
         raise ValidationError(exc.messages) from exc
 
 
+THREAD_PAGE_MAX = 100
+
+
+def thread_page(request, queryset):
+    """Opt-in paging for a conversation's messages or offers, newest first.
+
+    ?limit=N returns the newest N rows; ?before=<id> continues with rows older than that id.
+    Returns (rows, has_more), or None when the client sent no limit: clients written before paging
+    existed keep getting the whole thread as a plain list.
+    """
+    if "limit" not in request.query_params:
+        return None
+    try:
+        limit = int(request.query_params["limit"])
+        before = int(request.query_params["before"]) if "before" in request.query_params else None
+    except ValueError:
+        raise ValidationError({"detail": "limit and before must be whole numbers."})
+    if not 1 <= limit <= THREAD_PAGE_MAX:
+        raise ValidationError({"limit": f"Choose a limit between 1 and {THREAD_PAGE_MAX}."})
+    queryset = queryset.order_by("-pk")
+    if before is not None:
+        queryset = queryset.filter(pk__lt=before)
+    rows = list(queryset[:limit + 1])  # one extra row answers "is there more?" without a COUNT
+    return rows[:limit], len(rows) > limit
+
+
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = (permissions.IsAuthenticated,)
@@ -54,7 +80,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def messages(self, request, pk=None):
         conversation = self.get_object()
         if request.method == "GET":
-            return Response(MessageSerializer(conversation.messages.select_related("author"), many=True).data)
+            messages = conversation.messages.select_related("author")
+            page = thread_page(request, messages)
+            if page is None:
+                return Response(MessageSerializer(messages, many=True).data)
+            rows, has_more = page
+            # Oldest first within the page, the order a chat is read in.
+            return Response({"results": MessageSerializer(rows[::-1], many=True).data, "has_more": has_more})
         serializer = MessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         message = serializer.save(conversation=conversation, author=request.user)
@@ -66,7 +98,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def offers(self, request, pk=None):
         conversation = self.get_object()
         if request.method == "GET":
-            return Response(OfferSerializer(conversation.offers.select_related("proposer"), many=True).data)
+            offers = conversation.offers.select_related("proposer")
+            page = thread_page(request, offers)
+            if page is None:
+                return Response(OfferSerializer(offers, many=True).data)
+            rows, has_more = page
+            return Response({"results": OfferSerializer(rows, many=True).data, "has_more": has_more})
         serializer = OfferSerializer(data=request.data, context={"conversation": conversation})
         serializer.is_valid(raise_exception=True)
         offer = call_service(

@@ -39,6 +39,8 @@ const th = {
   emailVerified: 'ยืนยันอีเมลแล้ว', emailNotVerified: 'ยังไม่ได้ยืนยันอีเมล',
   resendVerification: 'ส่งลิงก์ยืนยันอีกครั้ง', emailVerifying: 'กำลังยืนยันอีเมล…',
   emailVerifiedSuccess: 'ยืนยันอีเมลแล้ว — คุณสามารถเริ่มขายได้',
+  verificationEmailNotSent: 'สร้างบัญชีแล้ว แต่ส่งอีเมลยืนยันไม่สำเร็จ กรุณาส่งลิงก์อีกครั้งในการตั้งค่า',
+  appCrashed: 'เกิดข้อผิดพลาด', appCrashedHint: 'กรุณาโหลดหน้านี้ใหม่อีกครั้ง', reloadPage: 'โหลดใหม่',
   verifyEmailBeforeListing: 'ยืนยันอีเมลก่อนสร้างรายการขาย',
   verifyIdentityBeforeListing: 'ยืนยันตัวตน (บัตรประชาชน/พาสปอร์ต) ก่อนลงขาย — ส่งเอกสารในการตั้งค่า',
   verifyBeforeListing: 'ยืนยันอีเมลหรือส่งเอกสารยืนยันตัวตนในการตั้งค่าก่อนลงขาย',
@@ -162,6 +164,9 @@ const th = {
   adminForceCancelDeal: 'ยกเลิกดีล (ผู้ดูแล)',
   adminReleaseStaleDeals: 'ปล่อยดีลค้างตามเวลา',
   adminStaleBadge: 'เกินกำหนด',
+  adminStaleWillComplete: 'ผู้ซื้อยืนยันแล้ว — จะปิดดีลเป็นขายแล้ว',
+  adminStaleAwaitBuyer: 'ผู้ขายยืนยัน แต่ผู้ซื้อยังไม่ยืนยัน — คงการจองไว้ ต้องตรวจสอบ',
+  adminStaleWillCancel: 'ไม่มีใครยืนยัน — จะยกเลิกและนำกลับมาขาย',
 };
 
 const en: typeof th = {
@@ -197,6 +202,8 @@ const en: typeof th = {
   emailVerified: 'Email verified', emailNotVerified: 'Email not verified',
   resendVerification: 'Resend verification link', emailVerifying: 'Verifying your email…',
   emailVerifiedSuccess: 'Email verified—you can start selling now.',
+  verificationEmailNotSent: "Your account is ready, but we couldn't send the verification email. Resend it from Settings.",
+  appCrashed: 'Something went wrong', appCrashedHint: 'Reload the page to continue.', reloadPage: 'Reload',
   verifyEmailBeforeListing: 'Verify your email before creating a listing.',
   verifyIdentityBeforeListing: 'Complete identity verification before listing — submit documents in Settings.',
   verifyBeforeListing: 'Verify your email or submit identity documents in Settings before listing.',
@@ -315,6 +322,9 @@ const en: typeof th = {
   adminForceCancelDeal: 'Force-cancel deal',
   adminReleaseStaleDeals: 'Release stale deals now',
   adminStaleBadge: 'Stale',
+  adminStaleWillComplete: 'Buyer confirmed — will complete as sold',
+  adminStaleAwaitBuyer: 'Seller confirmed, buyer has not — stays reserved, needs review',
+  adminStaleWillCancel: 'Nobody confirmed — will cancel and relist',
 };
 
 export const i18n: Record<AppLang, typeof th> = { th, en };
