@@ -1,7 +1,7 @@
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -61,7 +61,14 @@ class ListingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(asking_price__gte=minimum)
         if (maximum := _price_param(self.request, "max_price")) is not None:
             queryset = queryset.filter(asking_price__lte=maximum)
-        return queryset
+        return self._with_saved_flag(queryset)
+
+    def _with_saved_flag(self, queryset):
+        """Answer "has this user saved it?" inside the listing query, not with one query per listing."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset
+        return queryset.annotate(saved_by_me=Exists(SavedListing.objects.filter(user=user, listing=OuterRef("pk"))))
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -95,7 +102,7 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=("get",), permission_classes=(permissions.IsAuthenticated,))
     def saved(self, request):
-        queryset = (
+        queryset = self._with_saved_flag(
             Listing.objects.filter(saved_by__user=request.user)
             .filter(Q(status=Listing.Status.ACTIVE) | Q(seller=request.user))
             .select_related("seller")

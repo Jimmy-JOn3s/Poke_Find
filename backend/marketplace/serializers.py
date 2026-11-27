@@ -29,7 +29,13 @@ class ListingSerializer(serializers.ModelSerializer):
 
     def get_is_saved(self, obj):
         request = self.context.get("request")
-        return bool(request and request.user.is_authenticated and obj.saved_by.filter(user=request.user).exists())
+        if not (request and request.user.is_authenticated):
+            return False
+        # Lists and detail views annotate this (ListingViewSet.get_queryset); a listing that was just
+        # created or saved by the serializer has no annotation and is looked up directly.
+        if hasattr(obj, "saved_by_me"):
+            return obj.saved_by_me
+        return obj.saved_by.filter(user=request.user).exists()
 
     def validate_status(self, value):
         # No exception for "unchanged": comparing with a possibly stale instance could re-apply a

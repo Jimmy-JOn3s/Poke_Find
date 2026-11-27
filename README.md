@@ -14,7 +14,7 @@ REST API, with Thai/English interfaces and THB/USD pricing.
 - Listing discovery, search, filters, creation, editing, and deletion
 - Saved-listing API
 - Business analytics from completed deals (revenue, monthly chart, top cards, recent sales)
-- Market data foundation: rich deal snapshots, `PriceObservation` rows on completion, and `GET /api/market/variant/` (sale counts + 20-sale threshold; price recommendation TBD)
+- Market data foundation: rich deal snapshots, `PriceObservation` rows on completion, and `GET /api/v1/market/variant/` (sale counts + 20-sale threshold; price recommendation TBD)
 - Private buyer/seller conversations and messages
 - Offers and counter-offers answered by the other party; accepting reserves the
   listing. Sellers can also reserve a card for a buyer directly from chat (no
@@ -74,7 +74,7 @@ precedence. Local development (`DJANGO_DEBUG=1`) uses `backend/db.sqlite3`.
 Password-reset and magic-link emails are printed in the runserver console during local development.
 Set `RESEND_API_KEY` and `DEFAULT_FROM_EMAIL` in `backend/.env` to send real email through [Resend](https://resend.com).
 
-Verify the API at [http://127.0.0.1:8000/api/health/](http://127.0.0.1:8000/api/health/).
+Verify the API at [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/).
 The expected response is:
 
 ```json
@@ -126,12 +126,20 @@ revenue, and **average sale price**. Safe to re-run; it replaces prior
 .venv/bin/python backend/manage.py seed_market_intelligence
 ```
 
-Open accepted deals that never finish are auto-cancelled by `release_stale_deals`
-(defaults: **14 days** with no confirmations, **7 days** after only one party confirms).
-Run it on a schedule in production, e.g. daily:
+Open deals that never finish are settled by `release_stale_deals`:
+
+| Who confirmed | What happens |
+|---|---|
+| Both | Completes at once; the listing is marked sold |
+| Buyer only | After `STALE_DEAL_DAYS_PARTIAL` (default **7 days**): completes; listing sold |
+| Seller only | After `STALE_DEAL_DAYS_PARTIAL`: **stays reserved** and is flagged for staff review; never relisted automatically |
+| Nobody | After `STALE_DEAL_DAYS_OPEN` (default **14 days**): cancelled; listing back on sale |
+
+Nothing runs it automatically: schedule it in production, e.g. daily with cron:
 
 ```bash
-.venv/bin/python backend/manage.py release_stale_deals
+# m h dom mon dow
+15 3 * * * cd /srv/pokefind && .venv/bin/python backend/manage.py release_stale_deals
 ```
 
 Staff can also **force-cancel** a stuck deal or **release stale deals** from the admin
@@ -146,7 +154,7 @@ From the repository root:
 .venv/bin/python backend/manage.py check
 cd frontend
 pnpm test
-VITE_API_URL=https://api.example.com/api pnpm build
+VITE_API_URL=https://api.example.com/api/v1 pnpm build
 ```
 
 Builds fail on purpose when `VITE_API_URL` is missing or points at localhost. CI that
@@ -164,7 +172,7 @@ message naming any missing required variable.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_API_URL` | yes | Django API base URL, including `/api` |
+| `VITE_API_URL` | yes | Django API base URL, including `/api/v1` |
 | `DEMO_PASSWORD` | no | Local dev server only: fills the demo-account picker (never bundled) |
 
 ### Backend
@@ -188,6 +196,9 @@ message naming any missing required variable.
 | `DJANGO_SECURE_HSTS_SECONDS` | no | `31536000` | HSTS max-age (production) |
 | `DJANGO_NUM_PROXIES` | no | `0` | Proxies appending to `X-Forwarded-For`; must match your infrastructure or rate limits break |
 | `REDIS_URL` | no | — | Shared cache for rate limits across workers |
+| `DJANGO_LOG_LEVEL` | no | `INFO` | Level for our own apps' logs; `DEBUG` for more detail |
+| `DJANGO_LOG_TO_FILES` | no | `1` with `DJANGO_DEBUG=1`, else `0` | Write `access.log`, `app.log`, `error.log`; when `0` everything goes to stderr |
+| `DJANGO_LOG_DIR` / `DJANGO_LOG_RETENTION_DAYS` | no | `backend/logs` / `14` | Where log files go and how many daily files to keep |
 | `THROTTLE_ANON_RATE` / `THROTTLE_USER_RATE` / `THROTTLE_AUTH_RATE` / `THROTTLE_PASSWORD_RESET_RATE` | no | `120/min` / `600/min` / `10/min` / `10/hour` | Rate limits (`auth` = login, register and setting a new password; `password_reset` = reset-email requests) |
 | `JWT_ACCESS_MINUTES` / `JWT_REFRESH_DAYS` | no | `15` / `7` | Token lifetimes |
 | `MAX_UPLOAD_MB` | no | `5` | Largest avatar/photo upload |
@@ -196,11 +207,49 @@ message naming any missing required variable.
 
 See `backend/.env.example` for a ready-to-copy file.
 
+## API versioning
+
+The API is served under a version prefix: `/api/v1/...`. New clients should use it.
+
+- Unversioned `/api/...` paths still work and are pinned to v1, so clients built
+  before versioning keep running unchanged.
+- Additive changes (new endpoints, new optional fields) go into the current version.
+- A breaking change gets a new version: add an `api_v2_patterns` list in
+  `backend/config/urls.py`, mount it at `/api/v2/`, and add `"v2"` to
+  `ALLOWED_VERSIONS` in `backend/config/settings.py`. Views can branch on
+  `request.version`. v1 stays mounted until its clients have moved.
+
+## Logging
+
+Every request gets an ID. It is on each log line written during the request, in the
+`X-Request-ID` response header, and in the body of a 500 response, so one ID links a
+user's report to everything that happened.
+
+| File | Contents |
+| --- | --- |
+| `backend/logs/access.log` | One line per request: method, path, status, duration, user ID, IP, API version |
+| `backend/logs/app.log` | Events: deals opened/confirmed/completed/cancelled, sign-ins, registrations, staff actions |
+| `backend/logs/error.log` | Warnings and errors with stack traces |
+
+```bash
+grep 3f9c2a71d04b5e68 backend/logs/*.log   # everything for one request
+```
+
+- Files rotate at midnight and are kept for 14 days. With several server processes
+  writing the same files, rotation can lose lines; in production prefer
+  `DJANGO_LOG_TO_FILES=0` and let the host collect stderr.
+- Query strings, request bodies, passwords, tokens and email addresses are never logged.
+- To log something new, use `logging.getLogger(__name__)` in the app code: `info` for an
+  event worth keeping, `debug` for detail you only want with `DJANGO_LOG_LEVEL=DEBUG`,
+  `exception` inside an `except` block that carries on.
+- If a completed deal's price record failed to save (it is logged in `error.log`), run
+  `manage.py backfill_price_observations`.
+
 ## Useful URLs
 
 - Frontend: [http://127.0.0.1:5173](http://127.0.0.1:5173)
-- API health: [http://127.0.0.1:8000/api/health/](http://127.0.0.1:8000/api/health/)
-- Listings API: [http://127.0.0.1:8000/api/listings/](http://127.0.0.1:8000/api/listings/)
+- API health: [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/)
+- Listings API: [http://127.0.0.1:8000/api/v1/listings/](http://127.0.0.1:8000/api/v1/listings/)
 - Django admin: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
 
 Create an admin account when needed:

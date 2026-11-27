@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 
 from django.http import FileResponse, Http404
@@ -9,6 +10,8 @@ from accounts.verification_models import VerificationSubmission
 from accounts.verification_serializers import AdminVerificationReviewSerializer, AdminVerificationSerializer
 
 from .permissions import IsStaffUser
+
+logger = logging.getLogger(__name__)
 
 
 class AdminVerificationListView(generics.ListAPIView):
@@ -41,6 +44,10 @@ class AdminVerificationReviewView(APIView):
         serializer = AdminVerificationReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(submission=submission, reviewer=request.user)
+        logger.info(
+            "Staff %s reviewed verification %s for user %s: %s",
+            request.user.pk, submission.pk, submission.user_id, submission.status,
+        )
         return Response(AdminVerificationSerializer(submission).data)
 
 
@@ -56,5 +63,6 @@ class AdminVerificationFileView(APIView):
         file_field = getattr(submission, field)
         if not file_field:
             raise Http404
+        logger.info("Staff %s opened %s of verification %s", request.user.pk, field, submission.pk)
         content_type = mimetypes.guess_type(file_field.name)[0] or "application/octet-stream"
         return FileResponse(file_field.open("rb"), content_type=content_type)
